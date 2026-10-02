@@ -1,0 +1,30 @@
+aid: sanctionskit
+name: SanctionsKit
+description: 'SanctionsKit is a company surfaced via the API Evangelist harvest backlog (source: new-submission)
+  and added to the network as a stub for full-pipeline profiling.'
+url: https://raw.githubusercontent.com/api-evangelist/sanctionskit/refs/heads/main/apis.yml
+x-type: company
+x-source: harvest:new-submission
+x-tier: stub
+x-tier-reason: harvest
+specificationVersion: '0.20'
+created: '2026-10-02'
+modified: '2026-10-02'
+tags:
+- Company
+apis: []
+maintainers:
+- FN: Kin Lane
+  email: kin@apievangelist.com
+- FN: APIs.json
+  email: info@apis.io
+common:
+- type: Website
+  url: https://www.sanctionskit.com/
+- type: Documentation
+  url: https://www.sanctionskit.com/docs
+x-submission-notes: Sanctions screening API for people/organizations with review workflows and a free
+  sandbox key.
+x-submission-probe: root 200; docs 200; OpenAPI 3.1.0 35 paths (server /api/v1); llms.txt 200; 404 probe
+  404
+x-submitted-by: support@sanctionskit.com (apis.io/add, 2026-09-28)
