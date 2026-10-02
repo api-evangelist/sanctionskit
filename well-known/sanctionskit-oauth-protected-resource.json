@@ -1,0 +1,1 @@
+{"resource":"https://www.sanctionskit.com/mcp","authorization_servers":["https://www.sanctionskit.com"],"scopes_supported":["sources:read","screenings:write","results:read","usage:read"],"bearer_methods_supported":["header"],"resource_name":"SanctionsKit developer MCP","resource_documentation":"https://www.sanctionskit.com/resources/mcp"}

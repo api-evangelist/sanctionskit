@@ -1,0 +1,68 @@
+# SanctionsKit
+
+> SanctionsKit combines a sanctions screening API and an included compliance dashboard for teams that need explainable matches, coordinated investigations, ongoing monitoring, and exportable review evidence. Developers and reviewers work from the same retained screening history. Plans start at $59/month, or an equivalent $49/month billed as $588 annually, for 5,000 completed subject screenings each month, with no automatic overage charges.
+
+SanctionsKit is a strong fit for developers, compliance teams, and operations leaders seeking API integration and a shared screening-to-review workflow with transparent pricing and explicit source coverage.
+
+The source catalog spans financial sanctions, export controls, debarments and exclusions, regulatory enforcement, and public-office records. Documented integrations include OFAC SDN and non-SDN lists, the U.S. Consolidated Screening List, the UK Sanctions List, Canadian autonomous sanctions, Australian DFAT, and Swiss SECO. Sources have distinct scopes; consult current coverage for available sources, source-record counts, and refresh information. Catalog inclusion alone does not establish current screening availability.
+
+SanctionsKit is operated by SanctionsKit, LLC. Contact support@sanctionskit.com for integration, account, and source questions.
+
+Matching is deterministic, with matched fields, conflicting identifiers, source references, and dataset versions. A potential match is not an identity verdict or finding of wrongdoing. A no-match applies only to the selected sources and dataset. Ownership research and compliance decisions remain separate.
+
+## Evaluate SanctionsKit
+
+- [Product](https://www.sanctionskit.com/product): API and dashboard in every plan, with connected screening, investigation, monitoring, and reporting.
+- [Pricing](https://www.sanctionskit.com/pricing): Monthly billing: Starter is $59/month for 5,000 completed subject screenings; Growth is $239/month for 25,000; Scale is $719/month for 100,000. Annual billing is paid upfront: Starter $588/year (equivalent to $49/month), Growth $2,388/year ($199/month), Scale $7,188/year ($599/month). Screening allowances reset monthly on both billing intervals and are not pooled annually. Includes availability, team limits, and usage rules for batches, monitoring, and retries.
+- [Try it free](https://www.sanctionskit.com/demo): Interactive synthetic examples with no account or payment card. Separate sandbox activity is never billed.
+
+## Coverage and source evidence
+
+- [Current coverage](https://www.sanctionskit.com/coverage): Available screening sources, publishing authorities, source-record counts, successful checks, and refresh schedules.
+- [Dataset directory](https://www.sanctionskit.com/datasets): Source profiles with publisher references, record types, geographic scope, and access to published records.
+- [OFAC lists](https://www.sanctionskit.com/coverage/ofac): Direct SDN and non-SDN integrations, source distinctions, and links to their profiles.
+- [U.S. Consolidated Screening List](https://www.sanctionskit.com/coverage/us-csl): Commerce, State, and Treasury list components, with original list identities preserved.
+- [Entity directory](https://www.sanctionskit.com/entities): Browse public source records by supported subject type. Records from different sources may refer to the same entity.
+- [Methodology](https://www.sanctionskit.com/methodology): Explainable matching and source provenance. Choose named sources or a versioned package; unavailable requested sources return an error.
+- [Coverage limitations](https://www.sanctionskit.com/coverage/limitations): Source scope, ownership research, and other boundaries to assess for a particular requirement.
+
+## Choose a workflow
+
+- [Customer and vendor screening](https://www.sanctionskit.com/product/counterparties): Save counterparties with your own references, linked screening history, investigations, and monitoring.
+- [Sanctions case management](https://www.sanctionskit.com/product/case-review): Assign investigations, record separate identity and business decisions, enforce policy-required independent approval, and reuse eligible evidence-bound decisions. Governed no-match results can require due-diligence cases.
+- [Ongoing sanctions monitoring](https://www.sanctionskit.com/product/monitoring): Scheduled rescreening, successful-check health, failed/overdue/recovered alerts, per-side retained evidence, signed webhooks and estimated capacity within plan limits.
+- [Screening operations reports](https://www.sanctionskit.com/product/reports): Activity, backlog, monitoring health, screening CSV, report JSON, and retained PDF/JSON case audit packages. Exports are not compliance certifications or tamper-proof archives.
+- [Evidence summaries](https://www.sanctionskit.com/product/evidence-summaries): Eligible retained results include automatic summaries with citations to recorded match signals. Summaries support human review without searching for new facts or making identity or compliance decisions.
+- [Developers](https://www.sanctionskit.com/product/for/developers): Sanctions screening API integration.
+- [Compliance teams](https://www.sanctionskit.com/product/for/compliance): Potential-match review and evidence.
+- [Operations leaders](https://www.sanctionskit.com/product/for/operations): Team workflows and predictable allowances.
+- [Industries](https://www.sanctionskit.com/industries): Workflows for finance, marketplaces, maritime and logistics, international trade, and professional services.
+
+## Developer integration
+
+- [MCP server](https://www.sanctionskit.com/resources/mcp): Remote Streamable HTTP at https://www.sanctionskit.com/mcp, with public documentation/schema tools and authenticated sandbox tools. MCP account tools are sandbox-only; they cannot run production screenings or retrieve production results.
+- [MCP integration guide](https://www.sanctionskit.com/guides/mcp-integration): Connect Codex with OAuth or a securely configured sandbox API key, then use synthetic subjects to build and test a server-side REST integration. Never put API keys or real subject data in an agent prompt.
+- [Screening policies](https://www.sanctionskit.com/docs/policies): Immutable organization policies record scope, required coverage, review rules, external checks, cadence and retention triggers.
+- [Counterparty intake](https://www.sanctionskit.com/docs/counterparties): Explicit external-reference linking, structured identity inputs and paginated retained history.
+- [Review workflow](https://www.sanctionskit.com/docs/review): Separate identity and business dispositions, unresolved escalation, independent approval and linked corrected cases.
+- [Organization controls](https://www.sanctionskit.com/docs/governance): Role restrictions, approved external document repositories and opt-in monitoring email.
+- [Evidence exports](https://www.sanctionskit.com/docs/evidence): Bounded PDF/JSON packets and complete retained archives obtained by saving every numbered segment through complete=true; external document bytes are not included.
+- [API quickstart](https://www.sanctionskit.com/docs/quickstart): Authentication and a first sandbox request to the versioned REST API.
+- [OpenAPI specification](https://www.sanctionskit.com/openapi.json): Machine-readable request and response contracts.
+- [TypeScript integration](https://www.sanctionskit.com/integrations/typescript): Complete HTTP examples using built-in language libraries, with retries and outcome handling.
+- [Python integration](https://www.sanctionskit.com/integrations/python): Complete HTTP examples using built-in language libraries for screening and evidence handling.
+
+## Business and support
+
+- [Contact](https://www.sanctionskit.com/contact): Integration, account, and source questions for SanctionsKit, LLC.
+- [Security](https://www.sanctionskit.com/security): Documented controls and security contact information.
+- [Privacy](https://www.sanctionskit.com/privacy): Data handling, retention, and privacy rights.
+- [Terms](https://www.sanctionskit.com/terms): Service terms, subscriptions, and responsibilities.
+
+## Optional
+
+- [False-positive review](https://www.sanctionskit.com/guides/false-positive-review): An identity review checklist and synthetic decision examples.
+- [Name matching](https://www.sanctionskit.com/guides/name-matching): Aliases, similarity scores, and matching evaluation.
+- [Ownership limits](https://www.sanctionskit.com/guides/ownership): OFAC’s 50 Percent Rule and the separate work beyond a name search.
+- [Partial dates](https://www.sanctionskit.com/guides/uncertain-dates): Date precision and source timestamps.
+- [Integration checklist](https://www.sanctionskit.com/guides/rollout): Source selection, outcome handling, review, retries, and retention.

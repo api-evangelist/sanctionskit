@@ -1,0 +1,23 @@
+generated: '2026-10-02'
+method: searched
+generator: extract-docs-artifacts.py (local)
+source: https://www.sanctionskit.com/pricing
+sources:
+- https://www.sanctionskit.com/pricing
+name: SanctionsKit pricing
+audience: business-product
+pricing_basis: per-seat
+plans:
+- name: Starter
+  price_text: $ 59 / month
+  price: 59
+  billing_period: Monthly
+- name: Growth
+  price_text: $ 239 / month
+  price: 239
+  billing_period: Monthly
+- name: Scale
+  price_text: $ 719 / month
+  price: 719
+  billing_period: Monthly
+docs: https://www.sanctionskit.com/pricing

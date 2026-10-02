@@ -1,0 +1,21 @@
+generated: '2026-10-02'
+method: searched
+generator: extract-docs-artifacts.py (local)
+source: https://www.sanctionskit.com/docs/webhooks
+sources:
+- https://www.sanctionskit.com/docs/webhooks
+- https://www.sanctionskit.com/docs/api-reference/endpoints/get-webhooks
+- https://www.sanctionskit.com/docs/api-reference/endpoints/post-webhooks
+- https://www.sanctionskit.com/docs/api-reference/endpoints/delete-webhooks-id
+description: SanctionsKit publishes webhook events for screening completions and monitoring updates.
+events:
+- event: screening.completed
+  description: Indicates a screening has finished; the payload includes data.screeningId and data.status.
+- event: monitoring
+  description: Delivered for monitoring updates; the payload carries opaque monitor/event/counterparty/screening/case references, kind and errorCode.
+delivery:
+  signature: Webhook-Signature header (format v1= followed by 64 lowercase hexadecimal characters) signed with the secret returned at endpoint
+    creation using HMAC‑SHA256 over Webhook-Id + '.' + Webhook-Timestamp + '.' + raw body.
+  retries: If the endpoint’s durable receipt insertion fails, the server returns a 5xx response; deliveries are retried with an incremented attempts
+    count and a next_attempt_at timestamp. The delivery history includes attempts, next_attempt_at, and last_status.
+docs: https://www.sanctionskit.com/docs/webhooks

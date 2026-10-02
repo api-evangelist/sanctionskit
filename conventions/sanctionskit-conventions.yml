@@ -1,0 +1,23 @@
+generated: '2026-10-02'
+method: searched
+generator: extract-docs-artifacts.py (local)
+source: https://www.sanctionskit.com/docs/quickstart
+sources:
+- https://www.sanctionskit.com/docs/quickstart
+- https://www.sanctionskit.com/docs/onboarding
+- https://www.sanctionskit.com/product/api
+- https://www.sanctionskit.com/docs/authentication
+idempotency:
+  coverage: partial
+  header: Idempotency-Key
+  evidence: Use an Idempotency-Key for a new request and reuse it only to retry that same request. Replaying an accepted screening does not consume
+    another completed-screening unit.
+  scope:
+  - not enumerated on the pages read
+pagination: {}
+versioning: path segment (e.g., /api/v1/)
+error_envelope: Successful responses are wrapped in a top‑level "data" field; errors are returned with an "error" object containing fields such
+  as code, requestId, details, and may include a Retry-After header.
+authentication: 'Bearer token in the Authorization header (Authorization: Bearer <secret>)'
+request_tracing: X-Request-Id response header (also available as error.requestId)
+docs: https://www.sanctionskit.com/docs/quickstart

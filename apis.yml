@@ -1,30 +1,99 @@
 aid: sanctionskit
 name: SanctionsKit
-description: 'SanctionsKit is a company surfaced via the API Evangelist harvest backlog (source: new-submission)
-  and added to the network as a stub for full-pipeline profiling.'
+image: https://www.sanctionskit.com/og/v1/home
+description: SanctionsKit provides a comprehensive sanctions screening API and compliance dashboard that enables businesses to screen individuals
+  and organizations against global restricted‑party lists, manage investigations, and maintain audit trails. The platform offers batch and real‑time
+  screening, case management, and ongoing monitoring with a free sandbox key for developers to test integrations. It serves financial services,
+  fintech, trade, logistics, and marketplace sectors, delivering detailed source evidence and customizable alerts.
 url: https://raw.githubusercontent.com/api-evangelist/sanctionskit/refs/heads/main/apis.yml
 x-type: company
 x-source: harvest:new-submission
-x-tier: stub
-x-tier-reason: harvest
+x-tier: profiled
+x-tier-reason: enrichment pass 2026-10-02 (modular-v1; was harvest)
 specificationVersion: '0.20'
 created: '2026-10-02'
 modified: '2026-10-02'
 tags:
 - Company
-apis: []
+- sanctions
+- compliance
+- screening
+- API
+- fintech
 maintainers:
 - FN: Kin Lane
   email: kin@apievangelist.com
 - FN: APIs.json
   email: info@apis.io
 common:
+- type: RateLimits
+  url: rate-limits/sanctionskit-rate-limits.yml
+- type: Plans
+  url: plans/sanctionskit-plans-pricing.yml
+- type: Webhooks
+  url: asyncapi/sanctionskit-webhooks.yml
+- type: Idempotency
+  url: conventions/sanctionskit-conventions.yml
+- type: Conventions
+  url: conventions/sanctionskit-conventions.yml
+- type: Authentication
+  url: authentication/sanctionskit-authentication.yml
+- type: Conformance
+  url: conformance/sanctionskit-conformance.yml
+- type: LLMsTxt
+  url: llms/sanctionskit-llms.txt
+- type: WellKnown
+  url: well-known/sanctionskit-well-known.yml
+- type: Hosts
+  url: hosts/sanctionskit-hosts.yml
+- type: Vendors
+  url: vendors/sanctionskit-vendors.yml
+- type: SDKs
+  url: packages/sanctionskit-packages.yml
+- type: Packages
+  url: packages/sanctionskit-packages.yml
+- type: Security
+  url: https://www.sanctionskit.com/security
+- type: DeveloperPortal
+  url: https://www.sanctionskit.com/product/for/developers
+- type: DomainSecurity
+  url: security/sanctionskit-domain-security.yml
 - type: Website
   url: https://www.sanctionskit.com/
 - type: Documentation
   url: https://www.sanctionskit.com/docs
-x-submission-notes: Sanctions screening API for people/organizations with review workflows and a free
-  sandbox key.
-x-submission-probe: root 200; docs 200; OpenAPI 3.1.0 35 paths (server /api/v1); llms.txt 200; 404 probe
-  404
+- type: APIReference
+  url: https://www.sanctionskit.com/docs/api-reference
+- type: GettingStarted
+  url: https://www.sanctionskit.com/docs/quickstart
+- type: Support
+  url: https://www.sanctionskit.com/contact
+- type: Pricing
+  url: https://www.sanctionskit.com/pricing
+- type: SignUp
+  url: https://www.sanctionskit.com/signup
+- type: TermsOfService
+  url: https://www.sanctionskit.com/terms
+- type: PrivacyPolicy
+  url: https://www.sanctionskit.com/privacy
+- type: StatusPage
+  url: https://www.sanctionskit.com/status
+- type: Postman
+  url: https://app.getpostman.com/run-collection/58547371-68c65997-3558-40b8-ad72-e2eb06706cb5?action=collection%2Ffork&source=rip_markdown&collection-url=entityId%3D58547371-68c65997-3558-40b8-ad72-e2eb06706cb5%26entityType%3Dcollection
+- type: GitHubOrganization
+  url: https://github.com/SanctionsKit
+apis:
+- name: SanctionsKit API
+  description: SanctionsKit screening API providing endpoints for source discovery, screening policies, monitoring, webhooks, and reporting.
+  humanURL: https://www.sanctionskit.com/docs/api-reference
+  baseURL: https://www.sanctionskit.com/api/v1
+  aid: sanctionskit:sanctionskit-api
+x-submission-notes: Sanctions screening API for people/organizations with review workflows and a free sandbox key.
+x-submission-probe: root 200; docs 200; OpenAPI 3.1.0 35 paths (server /api/v1); llms.txt 200; 404 probe 404
 x-submitted-by: support@sanctionskit.com (apis.io/add, 2026-09-28)
+x-enrichment:
+  date: '2026-10-02'
+  status: enriched
+  artifacts_added: 16
+  pass: modular-v1
+  engine: identity=local,contract=local,surfaces=local,docs=local,regulatory=local

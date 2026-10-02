@@ -1,0 +1,16 @@
+generated: '2026-10-02'
+method: searched
+generator: extract-docs-artifacts.py (local)
+source: https://www.sanctionskit.com/docs/errors
+sources:
+- https://www.sanctionskit.com/docs/errors
+name: SanctionsKit rate limits
+limits:
+- name: authenticated_requests_per_minute
+  limit_text: 120 authenticated requests per minute per key or human actor
+  max: 120
+  window: minute
+headers:
+- Retry-After
+exhaustion_status: 429
+docs: https://www.sanctionskit.com/docs/errors

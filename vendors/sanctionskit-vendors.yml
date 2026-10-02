@@ -1,0 +1,67 @@
+generated: '2026-10-02'
+method: probed
+source: pre-flight dossier (docs platform, portal detections) + CNAME chains and response headers of the hosts apis.yml names
+registry: all/0-working/vendors.yml
+areas_vocabulary:
+- documentation
+- developer-portal
+- api-gateway
+- cdn
+- hosting
+- sdk-generation
+- api-collections
+- status-page
+- support
+- community
+- identity
+- mcp-hosting
+vendors:
+- vendor: postman
+  name: Postman
+  area: api-collections
+  host: app.getpostman.com
+  evidence: https://app.getpostman.com/run-collection/58547371-68c65997-3558-40b8-ad72-e2eb06706cb5?action=collection%2Ffork&source=rip_markdown&collection-url=entityId%3D58547371-68c65997-3558-40b8-ad72-e2eb06706cb5%26entityType%3Dcollection
+  signal: url:postman.com
+  confidence: high
+  kin_score:
+  - postman_collection
+- vendor: cloudflare
+  name: Cloudflare
+  area: cdn
+  host: app.getpostman.com
+  evidence: cname:cloudflare.net
+  signal: cname
+  confidence: high
+  kin_score:
+  - https_enforced
+  - hsts
+- vendor: vercel
+  name: Vercel
+  area: hosting
+  host: www.sanctionskit.com
+  evidence: 'cname:'
+  signal: docs-platform
+  confidence: medium
+  kin_score: []
+reliance:
+  areas_vendor_served:
+  - api-collections
+  - cdn
+  - hosting
+  vendor_count: 3
+  areas_observed: 12
+  share_of_observable_areas: 0.25
+  note: areas where a third party was DETECTED serving this provider; an area absent here was either self-run or not observed, and this script
+    cannot tell those apart
+checked:
+- 'docs-platform: custom'
+- www.sanctionskit.com (DeveloperPortal)
+- www.sanctionskit.com (Website)
+- www.sanctionskit.com (Documentation)
+- www.sanctionskit.com (APIReference)
+- www.sanctionskit.com (GettingStarted)
+- www.sanctionskit.com (Support)
+- www.sanctionskit.com (SignUp)
+- www.sanctionskit.com (StatusPage)
+- app.getpostman.com (Postman)
+- www.sanctionskit.com (baseURL)

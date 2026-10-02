@@ -1,0 +1,28 @@
+generated: '2026-10-02'
+method: searched
+generator: extract-docs-artifacts.py (local)
+source: https://www.sanctionskit.com/docs/authentication
+sources:
+- https://www.sanctionskit.com/docs/authentication
+- https://www.sanctionskit.com/docs/api-reference/endpoints/post-uploads
+- https://www.sanctionskit.com/docs/api-reference/endpoints/post-webhooks
+- https://www.sanctionskit.com/docs/api-reference/schemas/upload-token-request
+description: Authentication schemes for SanctionsKit API
+schemes:
+- type: http-bearer
+  name: Bearer
+  evidence: 'Transport Bearer token Send credentials in the Authorization header. Send machine credentials in a header API clients send Authorization:
+    Bearer followed by the secret.'
+  location: header
+  header: Authorization
+  scopes:
+  - sources:read
+  - screenings:write
+  - results:read
+  - batches:write
+  - monitors:write
+  - usage:read
+  - webhooks:write
+  how_to_obtain: Get your free API key from the dashboard (sandbox keys start with sk_test_, production keys start with sk_live_).
+note: Human sessions use signed‑in browser sessions and are not an API authentication scheme.
+docs: https://www.sanctionskit.com/docs/authentication
