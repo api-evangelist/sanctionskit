@@ -1,0 +1,5237 @@
+openapi: 3.2.0
+info:
+  title: SanctionsKit Reports API
+  version: 1.0.0
+  description: Explore success and error examples without an account or API key. Recorded examples use isolated synthetic application data; remaining examples are labeled contract fixtures. Potential-match screening is for review. No-match is limited to selected, qualified sources. Sandbox uses synthetic records and is never billed. Each successfully completed subject consumes one allowance unit, including monitoring rescreens. Failed rows and idempotent retries do not consume additional units.
+servers:
+- url: /api/v1
+  description: This site origin; deployment configuration and access rules apply
+tags:
+- name: Reports
+paths:
+  /reports:
+    get:
+      operationId: get__reports
+      summary: Read current backlog and period screening and reviewer activity
+      tags:
+      - Reports
+      description: 'Required API key scope: results:read.
+
+
+        Open, overdue, unassigned and pending-approval cases are the current backlog across all dates; screenings, completed case cohorts and human review activity use the selected period. Superseded cases are excluded from active work. Renewed reviews measure time from their latest review cycle.'
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: query
+        name: from
+        schema:
+          type: string
+          format: date
+        description: Inclusive calendar date in timeZone (UTC when omitted). Defaults to 29 calendar days before today. from must not be later than to; at most 366 calendar days per report.
+      - in: query
+        name: to
+        schema:
+          type: string
+          format: date
+        description: Inclusive calendar date in timeZone (UTC when omitted). Defaults to today. from must not be later than to; at most 366 calendar days per report.
+      - in: query
+        name: timeZone
+        schema:
+          type: string
+          default: UTC
+          maxLength: 100
+        description: Named IANA timezone, such as America/Denver. Uses local calendar-day boundaries including daylight-saving changes. Omission preserves UTC; raw offsets are rejected.
+      responses:
+        '200':
+          headers:
+            X-Request-Id:
+              description: Server-generated request correlation identifier.
+              schema:
+                type: string
+                format: uuid
+          description: Successful response. JSON object with the required data key. All properties marked required are present, including keys whose value may be null. Unmarked properties can be omitted; clients should tolerate additional response properties.
+          content:
+            application/json:
+              examples:
+                recorded_operations:
+                  summary: Operational totals from the synthetic documentation workspace
+                  description: Recorded from the real application handler against an isolated synthetic database. IDs, times and nonfunctional temporary secrets are normalized. No customer data or live provider request.
+                  value:
+                    data:
+                      from: '2026-09-17'
+                      to: '2026-09-17'
+                      timeZone: UTC
+                      generatedAt: '2026-09-17T12:00:00.000Z'
+                      screenings:
+                        total: 3
+                        potentialMatches: 2
+                        noMatches: 1
+                        expired: 0
+                      cases:
+                        open: 1
+                        confirmed: 0
+                        dismissed: 1
+                        overdue: 0
+                        pendingApproval: 0
+                        unassigned: 1
+                      monitoring:
+                        active: 0
+                        paused: 1
+                        overdue: 0
+                        failed: 0
+                        unread: 0
+                      reviews:
+                        total: 1
+                        reused: 0
+                        medianHours: 0
+                      reviewers:
+                      - actorId: docs-synthetic-reviewer
+                        actorEmail: reviewer@example.test
+                        decisions: 1
+                      sourceCoverage:
+                      - sourceId: sandbox-synthetic
+                        screenings: 3
+                      expiringEvidence: []
+                      limitations:
+                      - Screening activity and historical confirmed/dismissed case cohorts use the selected creation dates in UTC. Outstanding review work and monitoring health show the entire current portfolio, regardless of the date range.
+                      - Expired screening outcomes and source coverage are excluded from outcome and source totals. Missing retained data is not a no-match result.
+                      - Open, overdue, pending-approval and unassigned case counts include only cases with current retained screening evidence. Recorded confirmed and dismissed decisions remain in historical totals.
+                      - Review duration measures completed human decisions from the start of their review cycle, not analyst working time. Reviewer activity excludes automated case creation and reused decisions. Reviewer and expiry lists show at most 100 entries.
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/OperationsReport'
+        '400':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**invalid_request** — Correct the request fields, resource identifiers, JSON body or query parameters before retrying.
+
+
+            **invalid_date_range** — Use valid inclusive from/to calendar dates in the selected timezone, with from no later than to.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_request:
+                  summary: invalid request
+                  description: Synthetic error example. Correct the request fields, resource identifiers, JSON body or query parameters before retrying.
+                  value:
+                    error:
+                      code: invalid_request
+                      message: The request is invalid.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                invalid_date_range:
+                  summary: invalid date range
+                  description: Synthetic error example. Use valid inclusive from/to calendar dates in the selected timezone, with from no later than to.
+                  value:
+                    error:
+                      code: invalid_date_range
+                      message: Choose an inclusive date range of at most 366 days.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '401':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            WWW-Authenticate:
+              schema:
+                type: string
+              description: Bearer authentication challenge.
+          description: '**authentication_required** — Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.
+
+
+            **invalid_api_key** — Use an active key for the intended environment.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                authentication_required:
+                  summary: authentication required
+                  description: 'Synthetic error example. Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.'
+                  value:
+                    error:
+                      code: authentication_required
+                      message: Sign in to continue.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                invalid_api_key:
+                  summary: invalid api key
+                  description: Synthetic error example. Use an active key for the intended environment.
+                  value:
+                    error:
+                      code: invalid_api_key
+                      message: The API key is invalid, expired, or revoked.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '403':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**permission_denied** — Ask an organization owner to grant the required role or API-key scope.
+
+
+            **insufficient_scope** — Use a key with the scope stated in this operation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                permission_denied:
+                  summary: permission denied
+                  description: Synthetic error example. Ask an organization owner to grant the required role or API-key scope.
+                  value:
+                    error:
+                      code: permission_denied
+                      message: Your role does not allow this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                insufficient_scope:
+                  summary: insufficient scope
+                  description: Synthetic error example. Use a key with the scope stated in this operation.
+                  value:
+                    error:
+                      code: insufficient_scope
+                      message: The API key does not grant this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '405':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Allow:
+              schema:
+                type: string
+              description: Comma-separated supported HTTP methods.
+          description: '**method_not_allowed** — Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                method_not_allowed:
+                  summary: method not allowed
+                  description: Synthetic error example. Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.
+                  value:
+                    error:
+                      code: method_not_allowed
+                      message: This method is not supported for this endpoint.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '413':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**response_too_large** — Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                response_too_large:
+                  summary: response too large
+                  description: Synthetic error example. Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.
+                  value:
+                    error:
+                      code: response_too_large
+                      message: This response exceeds the size limit. Request a smaller page or a segmented export.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '429':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**rate_limited** — Wait for the request window to reset and retry with backoff.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                rate_limited:
+                  summary: rate limited
+                  description: Synthetic error example. Wait for the request window to reset and retry with backoff.
+                  value:
+                    error:
+                      code: rate_limited
+                      message: The per-minute request limit has been reached.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '500':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**internal_error** — Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internal_error:
+                  summary: internal error
+                  description: Synthetic error example. Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.
+                  value:
+                    error:
+                      code: internal_error
+                      message: The request could not be completed.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '503':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**temporarily_unavailable** — Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                temporarily_unavailable:
+                  summary: temporarily unavailable
+                  description: Synthetic error example. Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.
+                  value:
+                    error:
+                      code: temporarily_unavailable
+                      message: The service is temporarily unavailable. Retry shortly.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+  /reports/screenings:
+    get:
+      operationId: get__reports_screenings
+      summary: Download a bounded screening CSV with explicit expired outcomes
+      tags:
+      - Reports
+      description: 'Required API key scope: results:read.
+
+
+        Event and expiry values retain ISO UTC precision. Each data row carries the captured report dates and timezone. The download filename and X-Report-Time-Zone, X-Report-From and X-Report-To headers retain this context even for an empty export.'
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: query
+        name: from
+        schema:
+          type: string
+          format: date
+        description: Inclusive calendar date in timeZone (UTC when omitted). Defaults to 29 calendar days before today. from must not be later than to; at most 366 calendar days per report.
+      - in: query
+        name: to
+        schema:
+          type: string
+          format: date
+        description: Inclusive calendar date in timeZone (UTC when omitted). Defaults to today. from must not be later than to; at most 366 calendar days per report.
+      - in: query
+        name: timeZone
+        schema:
+          type: string
+          default: UTC
+          maxLength: 100
+        description: Named IANA timezone, such as America/Denver. Uses local calendar-day boundaries including daylight-saving changes. Omission preserves UTC; raw offsets are rejected.
+      - in: query
+        name: format
+        schema:
+          type: string
+          enum:
+          - csv
+          default: csv
+        description: Download format. Read the corresponding response Content-Type before decoding.
+      responses:
+        '200':
+          headers:
+            X-Report-Time-Zone:
+              schema:
+                type: string
+              description: Captured calendar timezone for the exported date range.
+            X-Report-From:
+              schema:
+                type: string
+                format: date
+              description: Inclusive first calendar date.
+            X-Report-To:
+              schema:
+                type: string
+                format: date
+              description: Inclusive last calendar date.
+            X-Request-Id:
+              description: Server-generated request correlation identifier.
+              schema:
+                type: string
+                format: uuid
+          description: Successful response. The response is the documented raw JSON or file content, without a data envelope. Check Content-Type before decoding.
+          content:
+            text/csv:
+              examples:
+                success:
+                  summary: Synthetic success example
+                  description: Synthetic contract example, validated against the response schema. Invented data; no live customer, provider request, payment, message or source activation.
+                  value: '"Screening ID","Created at (UTC)","Subject (when retained)","Outcome","Review decision","Sources checked","Evidence expires (UTC)"
+
+                    "01234567-89ab-4cde-8f01-23456789abcd","2026-09-17T12:00:00.000Z","Alex Morgan","potential_match","open","sandbox-synthetic","2026-10-17T12:00:00.000Z"'
+              schema:
+                type: string
+        '400':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**invalid_request** — Correct the request fields, resource identifiers, JSON body or query parameters before retrying.
+
+
+            **invalid_date_range** — Use valid inclusive from/to calendar dates in the selected timezone, with from no later than to.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_request:
+                  summary: invalid request
+                  description: Synthetic error example. Correct the request fields, resource identifiers, JSON body or query parameters before retrying.
+                  value:
+                    error:
+                      code: invalid_request
+                      message: The request is invalid.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                invalid_date_range:
+                  summary: invalid date range
+                  description: Synthetic error example. Use valid inclusive from/to calendar dates in the selected timezone, with from no later than to.
+                  value:
+                    error:
+                      code: invalid_date_range
+                      message: Choose an inclusive date range of at most 366 days.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '401':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            WWW-Authenticate:
+              schema:
+                type: string
+              description: Bearer authentication challenge.
+          description: '**authentication_required** — Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.
+
+
+            **invalid_api_key** — Use an active key for the intended environment.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                authentication_required:
+                  summary: authentication required
+                  description: 'Synthetic error example. Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.'
+                  value:
+                    error:
+                      code: authentication_required
+                      message: Sign in to continue.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                invalid_api_key:
+                  summary: invalid api key
+                  description: Synthetic error example. Use an active key for the intended environment.
+                  value:
+                    error:
+                      code: invalid_api_key
+                      message: The API key is invalid, expired, or revoked.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '403':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**permission_denied** — Ask an organization owner to grant the required role or API-key scope.
+
+
+            **insufficient_scope** — Use a key with the scope stated in this operation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                permission_denied:
+                  summary: permission denied
+                  description: Synthetic error example. Ask an organization owner to grant the required role or API-key scope.
+                  value:
+                    error:
+                      code: permission_denied
+                      message: Your role does not allow this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                insufficient_scope:
+                  summary: insufficient scope
+                  description: Synthetic error example. Use a key with the scope stated in this operation.
+                  value:
+                    error:
+                      code: insufficient_scope
+                      message: The API key does not grant this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '405':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Allow:
+              schema:
+                type: string
+              description: Comma-separated supported HTTP methods.
+          description: '**method_not_allowed** — Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                method_not_allowed:
+                  summary: method not allowed
+                  description: Synthetic error example. Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.
+                  value:
+                    error:
+                      code: method_not_allowed
+                      message: This method is not supported for this endpoint.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '413':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**response_too_large** — Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.
+
+
+            **export_too_large** — Narrow the screening date range. For a large case, retrieve every segment from the case archive endpoint.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                response_too_large:
+                  summary: response too large
+                  description: Synthetic error example. Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.
+                  value:
+                    error:
+                      code: response_too_large
+                      message: This response exceeds the size limit. Request a smaller page or a segmented export.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                export_too_large:
+                  summary: export too large
+                  description: Synthetic error example. Narrow the screening date range. For a large case, retrieve every segment from the case archive endpoint.
+                  value:
+                    error:
+                      code: export_too_large
+                      message: This export exceeds the bounded report size. Choose a shorter date range.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '429':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**rate_limited** — Wait for the request window to reset and retry with backoff.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                rate_limited:
+                  summary: rate limited
+                  description: Synthetic error example. Wait for the request window to reset and retry with backoff.
+                  value:
+                    error:
+                      code: rate_limited
+                      message: The per-minute request limit has been reached.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '500':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**internal_error** — Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internal_error:
+                  summary: internal error
+                  description: Synthetic error example. Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.
+                  value:
+                    error:
+                      code: internal_error
+                      message: The request could not be completed.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '503':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**temporarily_unavailable** — Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                temporarily_unavailable:
+                  summary: temporarily unavailable
+                  description: Synthetic error example. Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.
+                  value:
+                    error:
+                      code: temporarily_unavailable
+                      message: The service is temporarily unavailable. Retry shortly.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+  /reports/cases/{id}:
+    get:
+      operationId: get__reports_cases_id_
+      summary: Download a bounded case audit packet in JSON or PDF
+      tags:
+      - Reports
+      description: 'Required API key scope: results:read.
+
+
+        Includes retained findings, decisions, external-check history, document references and text attachments. Large cases require the segmented archive route. External repository bytes are not copied. This packet is not an immutable or signed archive.'
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Opaque resource identifier owned by the authenticated organization.
+      - in: query
+        name: format
+        schema:
+          enum:
+          - json
+          - pdf
+          default: json
+        description: Download format. Read the corresponding response Content-Type before decoding.
+      responses:
+        '200':
+          headers:
+            X-Request-Id:
+              description: Server-generated request correlation identifier.
+              schema:
+                type: string
+                format: uuid
+          description: Successful response. The response is the documented raw JSON or file content, without a data envelope. Check Content-Type before decoding.
+          content:
+            application/json:
+              examples:
+                recorded_audit_packet:
+                  summary: An audit packet containing synthetic retained evidence
+                  description: Recorded from the real application handler against an isolated synthetic database. IDs, times and nonfunctional temporary secrets are normalized. No customer data or live provider request.
+                  value:
+                    documents:
+                    - id: 00000000-0000-4000-8000-000000000001
+                      title: Synthetic ownership evidence
+                      url: https://repository.example.test/records/DOCS-001
+                      repository: Synthetic approved repository
+                      documentVersion: '1'
+                      sha256: null
+                      provenance: Obtained by the synthetic reviewer from the authorized repository.
+                      verification: unverified
+                      verifiedAt: null
+                      actorId: docs-synthetic-reviewer
+                      createdAt: '2026-09-17T12:00:00.000Z'
+                    format: sanctionskit-case-audit@1
+                    generatedAt: '2026-09-17T12:00:00.000Z'
+                    environment: sandbox
+                    investigation:
+                      id: 00000000-0000-4000-8000-000000000002
+                      screeningId: 00000000-0000-4000-8000-000000000003
+                      counterpartyId: 00000000-0000-4000-8000-000000000004
+                      decision: dismissed
+                      revision: 10
+                      assigneeId: null
+                      priority: high
+                      dueAt: null
+                      escalatedAt: null
+                      requiresSecondReview: false
+                      reviewState: approved
+                      businessDisposition: allow
+                      reviewStartedAt: '2026-09-17T12:00:00.000Z'
+                      supersededByScreeningId: null
+                      supersededByCaseId: null
+                      approvalRequiredByPolicy: false
+                      approvalRequiredForActions: []
+                      approverRoles:
+                      - owner
+                      - admin
+                      - analyst
+                      reviewConcern: null
+                      policyContext:
+                        id: 00000000-0000-4000-8000-000000000005
+                        version: 1
+                        name: Synthetic onboarding policy
+                        purpose: Document vendor onboarding checks
+                        exclusions: []
+                      decisionHistory:
+                      - id: 00000000-0000-4000-8000-000000000006
+                        decision: dismissed
+                        businessDisposition: allow
+                        rationale: Synthetic documentation review completed.
+                        actorId: docs-synthetic-reviewer
+                        actorLabel: reviewer@example.test
+                        createdAt: '2026-09-17T12:00:00.000Z'
+                        appliedControls:
+                          restrictedRoles:
+                            approval: []
+                            production: []
+                          screeningPolicy:
+                            id: 00000000-0000-4000-8000-000000000005
+                            review:
+                              approverRoles:
+                              - owner
+                              - admin
+                              - analyst
+                              secondReviewFor: []
+                              requireSecondReview: false
+                            version: 1
+                          governanceRevision: 2
+                          organizationApproval:
+                            approverRoles:
+                            - owner
+                            - admin
+                            - analyst
+                            secondReviewFor: []
+                            requireSecondReview: false
+                        screeningId: 00000000-0000-4000-8000-000000000003
+                      - id: 00000000-0000-4000-8000-000000000007
+                        decision: open
+                        businessDisposition: pending
+                        rationale: Potential matches require analyst review.
+                        actorId: system:screening
+                        actorLabel: null
+                        createdAt: '2026-09-17T12:00:00.000Z'
+                        appliedControls:
+                          restrictedRoles:
+                            approval: []
+                            production: []
+                          screeningPolicy:
+                            id: 00000000-0000-4000-8000-000000000005
+                            review:
+                              approverRoles:
+                              - owner
+                              - admin
+                              - analyst
+                              secondReviewFor: []
+                              requireSecondReview: false
+                            version: 1
+                          governanceRevision: 1
+                          organizationApproval:
+                            approverRoles:
+                            - owner
+                            - admin
+                            - analyst
+                            secondReviewFor: []
+                            requireSecondReview: false
+                        screeningId: 00000000-0000-4000-8000-000000000003
+                      decisionHistoryTruncated: false
+                      checks:
+                      - label: Ownership review
+                        status: completed_externally
+                        evidenceReference: Synthetic repository record DOCS-001
+                        rationale: Synthetic example of an independently completed ownership review.
+                        actorId: docs-synthetic-reviewer
+                        updatedAt: '2026-09-17T12:00:00.000Z'
+                      checkHistory:
+                      - id: 00000000-0000-4000-8000-000000000008
+                        screeningId: 00000000-0000-4000-8000-000000000003
+                        label: Ownership review
+                        status: completed_externally
+                        evidenceReference: Synthetic repository record DOCS-001
+                        rationale: Synthetic example of an independently completed ownership review.
+                        actorId: docs-synthetic-reviewer
+                        updatedAt: '2026-09-17T12:00:00.000Z'
+                        expiresAt: '2026-09-17T12:00:00.000Z'
+                      reuseChallenges: []
+                      submittedBy: docs-synthetic-reviewer
+                      approvedBy: docs-synthetic-reviewer
+                      matches:
+                      - id: 00000000-0000-4000-8000-000000000009
+                        screeningId: 00000000-0000-4000-8000-000000000003
+                        sourceId: sandbox-synthetic
+                        recordId: sandbox:person-001
+                        identityDecision: different
+                        businessDecision: allow
+                        rationale: 'Synthetic example: retained identifying evidence belongs to a different individual.'
+                        reusableUntil: null
+                        reusedRuleId: null
+                        actorId: docs-synthetic-reviewer
+                        updatedAt: '2026-09-17T12:00:00.000Z'
+                      subject:
+                        name: Alex Morgan
+                        entityType: person
+                        identifiers: []
+                      evidence: []
+                      corrections: []
+                      originCorrection: null
+                      reviewHistory: []
+                      comments:
+                      - id: 00000000-0000-4000-8000-000000000010
+                        body: 'Synthetic example: identifiers require reviewer comparison.'
+                        actorId: docs-synthetic-reviewer
+                        createdAt: '2026-09-17T12:00:00.000Z'
+                      attachments: []
+                    evidence:
+                    - id: 00000000-0000-4000-8000-000000000003
+                      createdAt: '2026-09-17T12:00:00.000Z'
+                      expiresAt: '2026-09-17T12:00:00.000Z'
+                      expired: false
+                      subject:
+                        name: Alex Morgan
+                        entityType: person
+                        identifiers: []
+                      result:
+                        id: 00000000-0000-4000-8000-000000000003
+                        status: potential_match
+                        matches:
+                        - score: 96
+                          record:
+                            id: sandbox:person-001
+                            list: Synthetic demonstration records
+                            names:
+                            - kind: primary
+                              value: Alex Morgan
+                            - kind: alias
+                              value: Алекс Морган
+                            sourceId: sandbox-synthetic
+                            addresses: []
+                            authority: SanctionsKit synthetic examples
+                            sourceUrl: https://sanctionskit.com/demo
+                            birthDates:
+                            - value: '1984'
+                              original: '1984'
+                              precision: year
+                            entityType: person
+                            extensions:
+                              synthetic: true
+                            identifiers:
+                            - type: passport
+                              value: DEMO-001
+                              issuer: Fictional authority
+                            designations:
+                            - wording: Invented example, not a government designation.
+                              category: other
+                              programs:
+                              - Synthetic demonstration only
+                              legalReferences: []
+                            nationalities: []
+                          evidence:
+                          - field: name
+                            method: normalized_name_exact
+                            queryValue: Alex Morgan
+                            explanation: Name similarity is a review signal, not a probability or finding of wrongdoing.
+                            sourceValue: Alex Morgan
+                            contribution: 96
+                          conflicts: []
+                          assessment:
+                            name:
+                              method: normalized_name_exact
+                              aliasKind: primary
+                              similarity: 96
+                              aliasQuality: unknown
+                            country:
+                              status: not_supplied
+                            birthDate:
+                              status: not_supplied
+                            alertBasis: name
+                            entityType:
+                              status: agreement
+                            reviewTier: name_only
+                            identifiers:
+                              status: not_supplied
+                              matched: 0
+                              conflicts: 0
+                              issuerUnknown: 0
+                              issuerAgreements: 0
+                            hasConflicts: false
+                            sameNameCandidates: 1
+                        coverage:
+                        - fresh: true
+                          version: '1'
+                          sourceId: sandbox-synthetic
+                          retrievedAt: '2026-09-17T12:00:00.000Z'
+                        matching:
+                          profile: standard
+                          version: review-1.2.0
+                          nameThreshold: 78
+                          retrievalVersion: indexed-1.1.1
+                          corroboratedNameThreshold: 75
+                        versions:
+                          policy: review-1.2.0
+                          dataset: sandbox-synthetic-v1
+                          package: sandbox@1
+                          matchingEngine: deterministic-1.2.0
+                        createdAt: '2026-09-17T12:00:00.000Z'
+                        disclaimer: Potential matches support analyst review. No match means no match in the selected sources and dataset, not legal clearance. Scores and evidence categories support review; they are not probabilities of identity or wrongdoing.
+                        environment: sandbox
+                        policySnapshot:
+                          id: 00000000-0000-4000-8000-000000000005
+                          name: Synthetic onboarding policy
+                          review:
+                            approverRoles:
+                            - owner
+                            - admin
+                            - analyst
+                            secondReviewFor: []
+                            requireSecondReview: false
+                          purpose: Document vendor onboarding checks
+                          version: 1
+                          createdAt: '2026-09-17T12:00:00.000Z'
+                          exclusions: []
+                          environment: sandbox
+                          jurisdictions:
+                          - Example jurisdiction
+                          externalChecks:
+                          - Ownership review
+                          optionalSources: {}
+                          requiredSources: {}
+                          retentionTrigger: business_event
+                          monitoringIntervalHours: 24
+                    decisions:
+                    - id: 00000000-0000-4000-8000-000000000007
+                      actorId: system:screening
+                      decision: open
+                      businessDisposition: pending
+                      appliedControls:
+                        restrictedRoles:
+                          approval: []
+                          production: []
+                        screeningPolicy:
+                          id: 00000000-0000-4000-8000-000000000005
+                          review:
+                            approverRoles:
+                            - owner
+                            - admin
+                            - analyst
+                            secondReviewFor: []
+                            requireSecondReview: false
+                          version: 1
+                        governanceRevision: 1
+                        organizationApproval:
+                          approverRoles:
+                          - owner
+                          - admin
+                          - analyst
+                          secondReviewFor: []
+                          requireSecondReview: false
+                      notes: Potential matches require analyst review.
+                      createdAt: '2026-09-17T12:00:00.000Z'
+                      screeningId: 00000000-0000-4000-8000-000000000003
+                      evidenceExpired: false
+                    - id: 00000000-0000-4000-8000-000000000006
+                      actorId: docs-synthetic-reviewer
+                      decision: dismissed
+                      businessDisposition: allow
+                      appliedControls:
+                        restrictedRoles:
+                          approval: []
+                          production: []
+                        screeningPolicy:
+                          id: 00000000-0000-4000-8000-000000000005
+                          review:
+                            approverRoles:
+                            - owner
+                            - admin
+                            - analyst
+                            secondReviewFor: []
+                            requireSecondReview: false
+                          version: 1
+                        governanceRevision: 2
+                        organizationApproval:
+                          approverRoles:
+                          - owner
+                          - admin
+                          - analyst
+                          secondReviewFor: []
+                          requireSecondReview: false
+                      notes: Synthetic documentation review completed.
+                      createdAt: '2026-09-17T12:00:00.000Z'
+                      screeningId: 00000000-0000-4000-8000-000000000003
+                      evidenceExpired: false
+                    attachments: []
+                    holds:
+                    - id: 00000000-0000-4000-8000-000000000011
+                      reason: Synthetic documented preservation need.
+                      until: null
+                      releasedBy: docs-synthetic-reviewer
+                      releaseReason: Synthetic preservation need concluded.
+                      releasedAt: '2026-09-17T12:00:00.000Z'
+                    limitations:
+                    - This package records retained screening evidence and review decisions; it is not a legal clearance or a certification of compliance.
+                    - Expired or deliberately unretained inputs are omitted and cannot be reconstructed. Source and policy scope are limited to each included result.
+                    - Attachment hashes help compare files; this export is not an independently signed or tamper-proof attestation.
+              schema:
+                $ref: '#/components/schemas/AuditPacket'
+            application/pdf:
+              examples:
+                success:
+                  summary: Synthetic success example
+                  description: Synthetic contract example, validated against the response schema. Invented data; no live customer, provider request, payment, message or source activation.
+                  value: '%PDF-1.7
+
+                    [Binary PDF audit package; choose application/json to inspect the example evidence.]'
+              schema:
+                type: string
+                format: binary
+        '400':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**invalid_request** — Correct the request fields, resource identifiers, JSON body or query parameters before retrying.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_request:
+                  summary: invalid request
+                  description: Synthetic error example. Correct the request fields, resource identifiers, JSON body or query parameters before retrying.
+                  value:
+                    error:
+                      code: invalid_request
+                      message: The request is invalid.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '401':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            WWW-Authenticate:
+              schema:
+                type: string
+              description: Bearer authentication challenge.
+          description: '**authentication_required** — Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.
+
+
+            **invalid_api_key** — Use an active key for the intended environment.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                authentication_required:
+                  summary: authentication required
+                  description: 'Synthetic error example. Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.'
+                  value:
+                    error:
+                      code: authentication_required
+                      message: Sign in to continue.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                invalid_api_key:
+                  summary: invalid api key
+                  description: Synthetic error example. Use an active key for the intended environment.
+                  value:
+                    error:
+                      code: invalid_api_key
+                      message: The API key is invalid, expired, or revoked.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '403':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**permission_denied** — Ask an organization owner to grant the required role or API-key scope.
+
+
+            **insufficient_scope** — Use a key with the scope stated in this operation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                permission_denied:
+                  summary: permission denied
+                  description: Synthetic error example. Ask an organization owner to grant the required role or API-key scope.
+                  value:
+                    error:
+                      code: permission_denied
+                      message: Your role does not allow this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                insufficient_scope:
+                  summary: insufficient scope
+                  description: Synthetic error example. Use a key with the scope stated in this operation.
+                  value:
+                    error:
+                      code: insufficient_scope
+                      message: The API key does not grant this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '404':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**not_found** — Check the identifier and selected environment. The resource must belong to your organization and remain available.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                not_found:
+                  summary: not found
+                  description: Synthetic error example. Check the identifier and selected environment. The resource must belong to your organization and remain available.
+                  value:
+                    error:
+                      code: not_found
+                      message: Case not found.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '405':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Allow:
+              schema:
+                type: string
+              description: Comma-separated supported HTTP methods.
+          description: '**method_not_allowed** — Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                method_not_allowed:
+                  summary: method not allowed
+                  description: Synthetic error example. Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.
+                  value:
+                    error:
+                      code: method_not_allowed
+                      message: This method is not supported for this endpoint.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '413':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**response_too_large** — Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.
+
+
+            **export_too_large** — Narrow the screening date range. For a large case, retrieve every segment from the case archive endpoint.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                response_too_large:
+                  summary: response too large
+                  description: Synthetic error example. Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.
+                  value:
+                    error:
+                      code: response_too_large
+                      message: This response exceeds the size limit. Request a smaller page or a segmented export.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                export_too_large:
+                  summary: export too large
+                  description: Synthetic error example. Narrow the screening date range. For a large case, retrieve every segment from the case archive endpoint.
+                  value:
+                    error:
+                      code: export_too_large
+                      message: This export exceeds the bounded report size. Choose a shorter date range.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '429':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**rate_limited** — Wait for the request window to reset and retry with backoff.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                rate_limited:
+                  summary: rate limited
+                  description: Synthetic error example. Wait for the request window to reset and retry with backoff.
+                  value:
+                    error:
+                      code: rate_limited
+                      message: The per-minute request limit has been reached.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '500':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**internal_error** — Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internal_error:
+                  summary: internal error
+                  description: Synthetic error example. Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.
+                  value:
+                    error:
+                      code: internal_error
+                      message: The request could not be completed.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '503':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**temporarily_unavailable** — Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                temporarily_unavailable:
+                  summary: temporarily unavailable
+                  description: Synthetic error example. Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.
+                  value:
+                    error:
+                      code: temporarily_unavailable
+                      message: The service is temporarily unavailable. Retry shortly.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+  /reports/cases/{id}/archive:
+    get:
+      operationId: get__reports_cases_id_archive
+      summary: Export every retained case archive segment
+      tags:
+      - Reports
+      description: 'Required API key scope: results:read.
+
+
+        Save numbered segments in order and follow nextCursor until complete=true. The cursor pins one case revision and cutoff; a changed case returns 409 and requires a restart. Expiry still applies. External document bytes are not included. Each response uses the ordinary data envelope.'
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Opaque resource identifier owned by the authenticated organization.
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque nextCursor from the preceding segment. Omit for the first segment.
+      responses:
+        '200':
+          headers:
+            X-Request-Id:
+              description: Server-generated request correlation identifier.
+              schema:
+                type: string
+                format: uuid
+          description: Successful response. JSON object with the required data key. All properties marked required are present, including keys whose value may be null. Unmarked properties can be omitted; clients should tolerate additional response properties.
+          content:
+            application/json:
+              examples:
+                recorded_first_segment:
+                  summary: First retained archive segment; continue until complete is true
+                  description: Recorded from the real application handler against an isolated synthetic database. IDs, times and nonfunctional temporary secrets are normalized. No customer data or live provider request.
+                  value:
+                    data:
+                      format: sanctionskit-case-archive@1
+                      caseId: 00000000-0000-4000-8000-000000000001
+                      revision: 10
+                      asOf: '2026-09-17T12:00:00.000Z'
+                      segment: 1
+                      category: case
+                      records:
+                      - id: 00000000-0000-4000-8000-000000000001
+                        organization_id: docs-synthetic-workspace
+                        environment: sandbox
+                        screening_id: 00000000-0000-4000-8000-000000000002
+                        monitor_id: null
+                        decision: dismissed
+                        created_at: '2026-09-17T12:00:00.000Z'
+                        updated_at: '2026-09-17T12:00:00.000Z'
+                        latest_screening_id: null
+                        counterparty_id: 00000000-0000-4000-8000-000000000003
+                        assignee_id: null
+                        priority: high
+                        due_at: null
+                        escalated_at: null
+                        revision: 10
+                        requires_second_review: false
+                        review_state: approved
+                        submitted_by: docs-synthetic-reviewer
+                        approved_by: docs-synthetic-reviewer
+                        submitted_screening_id: 00000000-0000-4000-8000-000000000002
+                        retention_policy: calendar_years
+                        retention_years: 10
+                        retention_days: null
+                        closed_at: '2026-09-17T12:00:00.000Z'
+                        retention_expires_at: '2026-09-17T12:00:00.000Z'
+                        business_disposition: allow
+                        review_started_at: '2026-09-17T12:00:00.000Z'
+                        superseded_by_screening_id: null
+                        superseded_by_case_id: null
+                        retention_trigger: business_event
+                        retention_event_at: '2026-09-17T12:00:00.000Z'
+                        retention_event_reason: Synthetic business event for the documentation example.
+                        retention_event_actor: docs-synthetic-reviewer
+                      nextCursor: eyJjYXNlSWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJlbnZpcm9ubWVudCI6InNhbmRib3giLCJyZXZpc2lvbiI6MTAsImFzT2YiOiIyMDI2LTA5LTE3VDEyOjAwOjAwLjAwMFoiLCJjYXRlZ29yeSI6InNjcmVlbmluZ3MiLCJhZnRlciI6bnVsbCwic2VnbWVudCI6Mn0
+                      complete: false
+                      limitations:
+                      - Keep every numbered segment through complete=true. A single segment is not the full archive.
+                      - Includes all retained case-linked records created by the archive cutoff. Expired content is represented by metadata and is never restored. If the case changes, restart the export.
+                      - External repository documents are references with reviewer-supplied provenance and hashes; original bytes are not included. Repository access and preservation remain your responsibility.
+                      - This archive is not legal clearance, an independently signed attestation, or a reproduction of a publisher database.
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CaseArchiveSegment'
+        '400':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**invalid_request** — Correct the request fields, resource identifiers, JSON body or query parameters before retrying.
+
+
+            **invalid_cursor** — Use the preceding segment nextCursor for this case and environment, without editing it.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_request:
+                  summary: invalid request
+                  description: Synthetic error example. Correct the request fields, resource identifiers, JSON body or query parameters before retrying.
+                  value:
+                    error:
+                      code: invalid_request
+                      message: The request is invalid.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                invalid_cursor:
+                  summary: invalid cursor
+                  description: Synthetic error example. Use the preceding segment nextCursor for this case and environment, without editing it.
+                  value:
+                    error:
+                      code: invalid_cursor
+                      message: The archive cursor is invalid.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '401':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            WWW-Authenticate:
+              schema:
+                type: string
+              description: Bearer authentication challenge.
+          description: '**authentication_required** — Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.
+
+
+            **invalid_api_key** — Use an active key for the intended environment.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                authentication_required:
+                  summary: authentication required
+                  description: 'Synthetic error example. Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.'
+                  value:
+                    error:
+                      code: authentication_required
+                      message: Sign in to continue.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                invalid_api_key:
+                  summary: invalid api key
+                  description: Synthetic error example. Use an active key for the intended environment.
+                  value:
+                    error:
+                      code: invalid_api_key
+                      message: The API key is invalid, expired, or revoked.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '403':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**permission_denied** — Ask an organization owner to grant the required role or API-key scope.
+
+
+            **insufficient_scope** — Use a key with the scope stated in this operation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                permission_denied:
+                  summary: permission denied
+                  description: Synthetic error example. Ask an organization owner to grant the required role or API-key scope.
+                  value:
+                    error:
+                      code: permission_denied
+                      message: Your role does not allow this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                insufficient_scope:
+                  summary: insufficient scope
+                  description: Synthetic error example. Use a key with the scope stated in this operation.
+                  value:
+                    error:
+                      code: insufficient_scope
+                      message: The API key does not grant this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '404':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**not_found** — Check the identifier and selected environment. The resource must belong to your organization and remain available.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                not_found:
+                  summary: not found
+                  description: Synthetic error example. Check the identifier and selected environment. The resource must belong to your organization and remain available.
+                  value:
+                    error:
+                      code: not_found
+                      message: Case not found.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '405':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Allow:
+              schema:
+                type: string
+              description: Comma-separated supported HTTP methods.
+          description: '**method_not_allowed** — Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                method_not_allowed:
+                  summary: method not allowed
+                  description: Synthetic error example. Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.
+                  value:
+                    error:
+                      code: method_not_allowed
+                      message: This method is not supported for this endpoint.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '409':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**archive_changed** — Restart from the first segment and keep only one complete, consistent archive.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                archive_changed:
+                  summary: archive changed
+                  description: Synthetic error example. Restart from the first segment and keep only one complete, consistent archive.
+                  value:
+                    error:
+                      code: archive_changed
+                      message: The case changed during export.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '413':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**response_too_large** — Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.
+
+
+            **archive_record_too_large** — Contact support for an authorized export of this record.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                response_too_large:
+                  summary: response too large
+                  description: Synthetic error example. Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.
+                  value:
+                    error:
+                      code: response_too_large
+                      message: This response exceeds the size limit. Request a smaller page or a segmented export.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                archive_record_too_large:
+                  summary: archive record too large
+                  description: Synthetic error example. Contact support for an authorized export of this record.
+                  value:
+                    error:
+                      code: archive_record_too_large
+                      message: A retained record exceeds the archive segment limit.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '429':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**rate_limited** — Wait for the request window to reset and retry with backoff.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                rate_limited:
+                  summary: rate limited
+                  description: Synthetic error example. Wait for the request window to reset and retry with backoff.
+                  value:
+                    error:
+                      code: rate_limited
+                      message: The per-minute request limit has been reached.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '500':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**internal_error** — Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internal_error:
+                  summary: internal error
+                  description: Synthetic error example. Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.
+                  value:
+                    error:
+                      code: internal_error
+                      message: The request could not be completed.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '503':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**temporarily_unavailable** — Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                temporarily_unavailable:
+                  summary: temporarily unavailable
+                  description: Synthetic error example. Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.
+                  value:
+                    error:
+                      code: temporarily_unavailable
+                      message: The service is temporarily unavailable. Retry shortly.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+  /reports/cases/{id}/governance:
+    get:
+      operationId: get__reports_cases_id_governance
+      summary: Read retention triggers, holds and approved external document references
+      tags:
+      - Reports
+      description: 'Required API key scope: results:read.'
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Opaque resource identifier owned by the authenticated organization.
+      responses:
+        '200':
+          headers:
+            X-Request-Id:
+              description: Server-generated request correlation identifier.
+              schema:
+                type: string
+                format: uuid
+          description: Successful response. JSON object with the required data key. All properties marked required are present, including keys whose value may be null. Unmarked properties can be omitted; clients should tolerate additional response properties.
+          content:
+            application/json:
+              examples:
+                recorded_controls:
+                  summary: Case retention, holds and external reference metadata
+                  description: Recorded from the real application handler against an isolated synthetic database. IDs, times and nonfunctional temporary secrets are normalized. No customer data or live provider request.
+                  value:
+                    data:
+                      retention:
+                        trigger: business_event
+                        eventAt: '2026-09-17T12:00:00.000Z'
+                        eventReason: Synthetic business event for the documentation example.
+                        eventActor: docs-synthetic-reviewer
+                        closedAt: '2026-09-17T12:00:00.000Z'
+                        expiresAt: '2026-09-17T12:00:00.000Z'
+                      holds:
+                      - id: 00000000-0000-4000-8000-000000000001
+                        reason: Synthetic documented preservation need.
+                        actorId: docs-synthetic-reviewer
+                        createdAt: '2026-09-17T12:00:00.000Z'
+                        until: null
+                        releasedAt: null
+                        releasedBy: null
+                        releaseReason: null
+                      documents:
+                      - id: 00000000-0000-4000-8000-000000000002
+                        screeningId: 00000000-0000-4000-8000-000000000003
+                        title: Synthetic ownership evidence
+                        url: https://repository.example.test/records/DOCS-001
+                        repository: Synthetic approved repository
+                        documentVersion: '1'
+                        sha256: null
+                        provenance: Obtained by the synthetic reviewer from the authorized repository.
+                        verification: unverified
+                        verifiedAt: null
+                        actorId: docs-synthetic-reviewer
+                        createdAt: '2026-09-17T12:00:00.000Z'
+                      documentsTruncated: false
+                      documentHosts:
+                      - repository.example.test
+                      documentRepositories:
+                      - name: repository.example.test
+                        url: https://repository.example.test/
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CaseGovernance'
+        '400':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**invalid_request** — Correct the request fields, resource identifiers, JSON body or query parameters before retrying.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_request:
+                  summary: invalid request
+                  description: Synthetic error example. Correct the request fields, resource identifiers, JSON body or query parameters before retrying.
+                  value:
+                    error:
+                      code: invalid_request
+                      message: The request is invalid.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '401':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            WWW-Authenticate:
+              schema:
+                type: string
+              description: Bearer authentication challenge.
+          description: '**authentication_required** — Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.
+
+
+            **invalid_api_key** — Use an active key for the intended environment.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                authentication_required:
+                  summary: authentication required
+                  description: 'Synthetic error example. Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.'
+                  value:
+                    error:
+                      code: authentication_required
+                      message: Sign in to continue.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                invalid_api_key:
+                  summary: invalid api key
+                  description: Synthetic error example. Use an active key for the intended environment.
+                  value:
+                    error:
+                      code: invalid_api_key
+                      message: The API key is invalid, expired, or revoked.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '403':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**permission_denied** — Ask an organization owner to grant the required role or API-key scope.
+
+
+            **insufficient_scope** — Use a key with the scope stated in this operation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                permission_denied:
+                  summary: permission denied
+                  description: Synthetic error example. Ask an organization owner to grant the required role or API-key scope.
+                  value:
+                    error:
+                      code: permission_denied
+                      message: Your role does not allow this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                insufficient_scope:
+                  summary: insufficient scope
+                  description: Synthetic error example. Use a key with the scope stated in this operation.
+                  value:
+                    error:
+                      code: insufficient_scope
+                      message: The API key does not grant this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '404':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**not_found** — Check the identifier and selected environment. The resource must belong to your organization and remain available.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                not_found:
+                  summary: not found
+                  description: Synthetic error example. Check the identifier and selected environment. The resource must belong to your organization and remain available.
+                  value:
+                    error:
+                      code: not_found
+                      message: Case not found.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '405':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Allow:
+              schema:
+                type: string
+              description: Comma-separated supported HTTP methods.
+          description: '**method_not_allowed** — Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                method_not_allowed:
+                  summary: method not allowed
+                  description: Synthetic error example. Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.
+                  value:
+                    error:
+                      code: method_not_allowed
+                      message: This method is not supported for this endpoint.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '413':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**response_too_large** — Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                response_too_large:
+                  summary: response too large
+                  description: Synthetic error example. Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.
+                  value:
+                    error:
+                      code: response_too_large
+                      message: This response exceeds the size limit. Request a smaller page or a segmented export.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '429':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**rate_limited** — Wait for the request window to reset and retry with backoff.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                rate_limited:
+                  summary: rate limited
+                  description: Synthetic error example. Wait for the request window to reset and retry with backoff.
+                  value:
+                    error:
+                      code: rate_limited
+                      message: The per-minute request limit has been reached.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '500':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**internal_error** — Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internal_error:
+                  summary: internal error
+                  description: Synthetic error example. Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.
+                  value:
+                    error:
+                      code: internal_error
+                      message: The request could not be completed.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '503':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**temporarily_unavailable** — Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                temporarily_unavailable:
+                  summary: temporarily unavailable
+                  description: Synthetic error example. Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.
+                  value:
+                    error:
+                      code: temporarily_unavailable
+                      message: The service is temporarily unavailable. Retry shortly.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+components:
+  schemas:
+    ArchiveFinding:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+        environment:
+          type: string
+        case_id:
+          type: string
+          format: uuid
+        screening_id:
+          type: string
+          format: uuid
+        source_id:
+          type: string
+        record_id:
+          type: string
+        field:
+          type: string
+        value:
+          type: string
+        source_reference:
+          type: string
+        verification:
+          type: string
+        comparison:
+          type: string
+        notes:
+          type: string
+        content:
+          type: string
+        actor_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+      required:
+      - id
+      - organization_id
+      - environment
+      - case_id
+      - screening_id
+      - source_id
+      - record_id
+      - field
+      - value
+      - source_reference
+      - verification
+      - comparison
+      - notes
+      - content
+      - actor_id
+      - created_at
+      - expires_at
+      description: Retained record for archive category findings. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
+    ScreeningRequest:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      type: object
+      properties:
+        subject:
+          type: object
+          properties:
+            name:
+              type: string
+              minLength: 2
+              maxLength: 300
+              description: Name to compare with publisher records. Leading and trailing whitespace is removed; provide the fullest reliable name available.
+            entityType:
+              default: person
+              type: string
+              enum:
+              - person
+              - organization
+              - vessel
+              - aircraft
+              - other
+              description: Type of subject. Defaults to person when omitted. Every selected source must support this type.
+            identifiers:
+              default: []
+              maxItems: 20
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                    description: Identifier scheme, such as passport, national_id, registration, lei, imo or mmsi. Matching normalizes supported scheme aliases.
+                  value:
+                    type: string
+                    minLength: 1
+                    maxLength: 160
+                    description: Identifier value. Send the original value; scheme-specific normalization is applied during matching.
+                  issuer:
+                    type: string
+                    minLength: 1
+                    maxLength: 100
+                    description: Optional issuing authority or country. Omit when unknown; do not send null.
+                required:
+                - type
+                - value
+                additionalProperties: false
+              description: Typed identifiers used for exact matching, such as passport, national_id, registration, lei, imo or mmsi. Defaults to an empty array. Use the publisher’s identifier scheme; custom scheme names are accepted.
+            birthDate:
+              anyOf:
+              - type: string
+                pattern: ^(?!0000)\d{4}$
+              - type: string
+                pattern: ^(?!0000)\d{4}-(0[1-9]|1[0-2])$
+              - type: string
+                allOf:
+                - pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))$
+                - pattern: ^(?!0000)
+              description: 'Known date or partial date: YYYY, YYYY-MM or YYYY-MM-DD. Preserve known precision; do not invent a month or day. Year 0000 and invalid dates are rejected.'
+            country:
+              type: string
+              minLength: 2
+              maxLength: 100
+              description: Known country name or code used as supporting identity evidence. It is not a source-selection or geographic coverage filter.
+          required:
+          - name
+          additionalProperties: false
+          description: Identity to screen. name is required; entityType defaults to person and identifiers defaults to an empty array.
+        counterpartyId:
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          description: Optional existing active counterparty UUID in the same organization and environment. The submitted subject must match its current identity; this does not create a counterparty.
+        policy:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+              description: Policy UUID from GET /policies.
+            version:
+              type: integer
+              exclusiveMinimum: 0
+              maximum: 9007199254740991
+              description: Exact approved policy version from GET /policies. Reload the policy if that version is no longer available.
+          required:
+          - id
+          - version
+          additionalProperties: false
+          description: Approved organization policy reference. Required when GET /policies returns requirePolicy=true. A supplied policy must be current and compatible with the subject and requested coverage.
+          x-required-when: GET /policies returns requirePolicy=true for the current API key environment.
+        reference:
+          type: string
+          maxLength: 160
+          description: Optional caller reference (up to 160 characters). It is retained with standard evidence and returned by GET /results/{id}; it is null in minimal-retention retrieval.
+        sources:
+          minItems: 1
+          maxItems: 512
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 80
+          description: Explicit source IDs from GET /sources. Provide sources or package, exactly one. Every selected source must be available, fresh and support the subject type; unavailable coverage fails closed.
+        package:
+          type: string
+          minLength: 1
+          maxLength: 80
+          description: One versioned coverage package, mutually exclusive with sources. Sandbox accepts only sandbox@1. Use only a package available to the selected environment; no implicit global coverage is applied.
+        retention:
+          default: standard
+          type: string
+          enum:
+          - standard
+          - minimal
+          description: standard retains inputs and evidence under organization/case policy. minimal is available only for individual API-key screenings, lasts 24 hours, omits submitted inputs, and cannot create a review case. Governance requirements can require standard. Defaults to standard.
+      required:
+      - subject
+      additionalProperties: false
+      oneOf:
+      - required:
+        - sources
+        not:
+          required:
+          - package
+      - required:
+        - package
+        not:
+          required:
+          - sources
+      description: Single subject input. Exactly one of sources or package is required. Only subject is unconditionally required; coverage and approved policy also have conditional requirements described below.
+    MatchAssessment:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      type: object
+      properties:
+        name:
+          anyOf:
+          - type: object
+            properties:
+              similarity:
+                type: integer
+                minimum: 0
+                maximum: 100
+              method:
+                type: string
+              aliasKind:
+                type: string
+                enum:
+                - primary
+                - alias
+              aliasQuality:
+                type: string
+                enum:
+                - strong
+                - weak
+                - unknown
+            required:
+            - similarity
+            - method
+            - aliasKind
+            - aliasQuality
+            additionalProperties: false
+          - type: 'null'
+        identifiers:
+          type: object
+          properties:
+            status:
+              type: string
+              enum:
+              - agreement
+              - conflict
+              - not_supplied
+              - unavailable
+              - not_comparable
+            matched:
+              type: integer
+              minimum: 0
+              maximum: 9007199254740991
+            issuerAgreements:
+              type: integer
+              minimum: 0
+              maximum: 9007199254740991
+            issuerUnknown:
+              type: integer
+              minimum: 0
+              maximum: 9007199254740991
+            conflicts:
+              type: integer
+              minimum: 0
+              maximum: 9007199254740991
+          required:
+          - status
+          - matched
+          - issuerAgreements
+          - issuerUnknown
+          - conflicts
+          additionalProperties: false
+        birthDate:
+          type: object
+          properties:
+            status:
+              type: string
+              enum:
+              - agreement
+              - conflict
+              - not_supplied
+              - unavailable
+              - not_comparable
+            precision:
+              type: string
+              enum:
+              - year
+              - month
+              - day
+          required:
+          - status
+          additionalProperties: false
+        country:
+          type: object
+          properties:
+            status:
+              type: string
+              enum:
+              - agreement
+              - conflict
+              - not_supplied
+              - unavailable
+              - not_comparable
+          required:
+          - status
+          additionalProperties: false
+        entityType:
+          type: object
+          properties:
+            status:
+              type: string
+              enum:
+              - agreement
+              - conflict
+              - not_supplied
+              - unavailable
+              - not_comparable
+          required:
+          - status
+          additionalProperties: false
+        reviewTier:
+          type: string
+          enum:
+          - identifier
+          - corroborated
+          - conflicting
+          - name_only
+        alertBasis:
+          type: string
+          enum:
+          - identifier
+          - name
+          - name_and_birth_date
+        hasConflicts:
+          type: boolean
+        sameNameCandidates:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+      required:
+      - name
+      - identifiers
+      - birthDate
+      - country
+      - entityType
+      - reviewTier
+      - alertBasis
+      - hasConflicts
+      - sameNameCandidates
+      additionalProperties: false
+      description: Retained name similarity, identity comparison states and review evidence tier. Contains no copied subject values. Missing information, conflicts and partial dates remain distinct; an evidence tier is not a finding of identity or wrongdoing.
+    ArchiveDocument:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+        environment:
+          type: string
+        case_id:
+          type: string
+          format: uuid
+        screening_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        url:
+          type: string
+        repository:
+          type: string
+        document_version:
+          type: string
+        sha256:
+          anyOf:
+          - type: string
+          - type: 'null'
+        provenance:
+          type: string
+        verification:
+          type: string
+        verified_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        actor_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+      required:
+      - id
+      - organization_id
+      - environment
+      - case_id
+      - screening_id
+      - title
+      - url
+      - repository
+      - document_version
+      - sha256
+      - provenance
+      - verification
+      - verified_at
+      - actor_id
+      - created_at
+      - expires_at
+      description: Retained record for archive category documents. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
+    SourceRecord:
+      type: object
+      required:
+      - id
+      - sourceId
+      - authority
+      - list
+      - sourceUrl
+      - entityType
+      - names
+      - identifiers
+      - birthDates
+      - addresses
+      - nationalities
+      - designations
+      - extensions
+      properties:
+        id:
+          type: string
+        sourceId:
+          type: string
+        authority:
+          type: string
+        list:
+          type: string
+        sourceUrl:
+          type: string
+        entityType:
+          type: string
+          enum:
+          - person
+          - organization
+          - vessel
+          - aircraft
+          - other
+        names:
+          type: array
+          items:
+            type: object
+            required:
+            - value
+            - kind
+            properties:
+              value:
+                type: string
+              kind:
+                enum:
+                - primary
+                - alias
+              quality:
+                enum:
+                - strong
+                - weak
+                - unknown
+              script:
+                type: string
+              provenance:
+                $ref: '#/components/schemas/SourceProvenance'
+        identifiers:
+          type: array
+          items:
+            type: object
+            required:
+            - type
+            - value
+            properties:
+              type:
+                type: string
+              value:
+                type: string
+              issuer:
+                type: string
+              provenance:
+                $ref: '#/components/schemas/SourceProvenance'
+        birthDates:
+          type: array
+          items:
+            type: object
+            required:
+            - value
+            - precision
+            - original
+            properties:
+              value:
+                type: string
+              precision:
+                enum:
+                - day
+                - month
+                - year
+                - range
+                - unknown
+              original:
+                type: string
+        addresses:
+          type: array
+          items:
+            type: object
+            properties:
+              text:
+                type: string
+              country:
+                type: string
+              provenance:
+                $ref: '#/components/schemas/SourceProvenance'
+        nationalities:
+          type: array
+          items:
+            type: string
+        designations:
+          type: array
+          items:
+            type: object
+            required:
+            - category
+            - programs
+            - legalReferences
+            properties:
+              category:
+                enum:
+                - financial_sanctions
+                - export_control
+                - debarment
+                - other
+              programs:
+                type: array
+                items:
+                  type: string
+              legalReferences:
+                type: array
+                items:
+                  type: string
+              wording:
+                type: string
+              effectiveDate:
+                type: string
+        dataThrough:
+          type: string
+          format: date
+          description: Inclusive publisher data-availability deadline; not a legal end date.
+        screeningPeriods:
+          type: array
+          maxItems: 1000
+          description: Inclusive UTC date intervals for current screening. Omitted means no date filter; an empty array excludes the record from current screening.
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              from:
+                type: string
+                format: date
+              through:
+                type: string
+                format: date
+        publicContext:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required:
+            - label
+            - value
+            additionalProperties: false
+            properties:
+              label:
+                type: string
+                maxLength: 100
+              value:
+                type: string
+                maxLength: 2000
+        extensions:
+          type: object
+          additionalProperties: true
+          description: Source-specific published extensions. Keys and value shapes vary by source; preserve unknown values without assuming a fixed schema.
+    SourceProvenance:
+      type: object
+      properties:
+        sourceId:
+          type: string
+        recordId:
+          type: string
+        field:
+          type: string
+        rawValue:
+          type: string
+      required:
+      - sourceId
+      - recordId
+      - field
+      description: Publisher field attribution. rawValue is optional; when present it preserves the original published value.
+    AuditPacket:
+      type: object
+      properties:
+        format:
+          const: sanctionskit-case-audit@1
+        generatedAt:
+          type: string
+          format: date-time
+        environment:
+          type: string
+          enum:
+          - sandbox
+          - production
+        investigation:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            screeningId:
+              type: string
+              format: uuid
+            counterpartyId:
+              anyOf:
+              - type: string
+                format: uuid
+              - type: 'null'
+            decision:
+              type: string
+              enum:
+              - open
+              - confirmed
+              - dismissed
+            revision:
+              type: integer
+              minimum: 0
+            assigneeId:
+              anyOf:
+              - type: string
+              - type: 'null'
+            priority:
+              type: string
+            dueAt:
+              anyOf:
+              - type: string
+                format: date-time
+              - type: 'null'
+            escalatedAt:
+              anyOf:
+              - type: string
+                format: date-time
+              - type: 'null'
+            requiresSecondReview:
+              type: boolean
+            reviewState:
+              type: string
+              enum:
+              - open
+              - pending_approval
+              - approved
+              - superseded
+            businessDisposition:
+              type: string
+              enum:
+              - pending
+              - allow
+              - restrict
+              - escalate
+            reviewStartedAt:
+              type: string
+              format: date-time
+            supersededByScreeningId:
+              anyOf:
+              - type: string
+                format: uuid
+              - type: 'null'
+            supersededByCaseId:
+              anyOf:
+              - type: string
+                format: uuid
+              - type: 'null'
+            approvalRequiredByPolicy:
+              type: boolean
+            approvalRequiredForActions:
+              type: array
+              items:
+                type: string
+            approverRoles:
+              type: array
+              items:
+                type: string
+            reviewConcern:
+              anyOf:
+              - type: string
+              - type: 'null'
+            policyContext:
+              anyOf:
+              - type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  version:
+                    type: integer
+                    minimum: 0
+                  name:
+                    type: string
+                  purpose:
+                    type: string
+                  exclusions:
+                    type: array
+                    items:
+                      type: string
+                required:
+                - id
+                - version
+                - name
+                - purpose
+                - exclusions
+              - type: 'null'
+            decisionHistory:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  screeningId:
+                    anyOf:
+                    - type: string
+                      format: uuid
+                    - type: 'null'
+                  decision:
+                    type: string
+                    enum:
+                    - open
+                    - confirmed
+                    - dismissed
+                  businessDisposition:
+                    anyOf:
+                    - type: string
+                      enum:
+                      - pending
+                      - allow
+                      - restrict
+                      - escalate
+                    - type: 'null'
+                  rationale:
+                    anyOf:
+                    - type: string
+                    - type: 'null'
+                  actorId:
+                    type: string
+                  actorLabel:
+                    anyOf:
+                    - type: string
+                    - type: 'null'
+                  createdAt:
+                    type: string
+                    format: date-time
+                  appliedControls:
+                    anyOf:
+                    - $ref: '#/components/schemas/AppliedDecisionControls'
+                    - type: 'null'
+                required:
+                - id
+                - screeningId
+                - decision
+                - businessDisposition
+                - rationale
+                - actorId
+                - actorLabel
+                - createdAt
+                - appliedControls
+            decisionHistoryTruncated:
+              type: boolean
+            checks:
+              type: array
+              items:
+                type: object
+                properties:
+                  label:
+                    type: string
+                  instructions:
+                    type: string
+                  evidenceExample:
+                    type: string
+                  reviewConcern:
+                    type: string
+                  status:
+                    type: string
+                    enum:
+                    - outstanding
+                    - completed_externally
+                    - not_applicable
+                  evidenceReference:
+                    type: string
+                  rationale:
+                    type: string
+                  actorId:
+                    anyOf:
+                    - type: string
+                    - type: 'null'
+                  updatedAt:
+                    anyOf:
+                    - type: string
+                      format: date-time
+                    - type: 'null'
+                required:
+                - label
+                - status
+                - evidenceReference
+                - rationale
+                - actorId
+                - updatedAt
+            checkHistory:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  screeningId:
+                    type: string
+                    format: uuid
+                  label:
+                    type: string
+                  status:
+                    type: string
+                    enum:
+                    - outstanding
+                    - completed_externally
+                    - not_applicable
+                  evidenceReference:
+                    type: string
+                  rationale:
+                    type: string
+                  actorId:
+                    type: string
+                  updatedAt:
+                    type: string
+                    format: date-time
+                  expiresAt:
+                    anyOf:
+                    - type: string
+                      format: date-time
+                    - type: 'null'
+                required:
+                - id
+                - screeningId
+                - label
+                - status
+                - evidenceReference
+                - rationale
+                - actorId
+                - updatedAt
+                - expiresAt
+            reuseChallenges:
+              type: array
+              items:
+                type: object
+                properties:
+                  ruleId:
+                    type: string
+                  originCaseId:
+                    type: string
+                  challengedByCaseId:
+                    type: string
+                  actorId:
+                    type: string
+                  revokedAt:
+                    type: string
+                    format: date-time
+                  affectedCaseIds:
+                    type: array
+                    items:
+                      type: string
+                required:
+                - ruleId
+                - originCaseId
+                - challengedByCaseId
+                - actorId
+                - revokedAt
+                - affectedCaseIds
+            submittedBy:
+              anyOf:
+              - type: string
+              - type: 'null'
+            approvedBy:
+              anyOf:
+              - type: string
+              - type: 'null'
+            matches:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  screeningId:
+                    type: string
+                    format: uuid
+                  sourceId:
+                    type: string
+                  recordId:
+                    type: string
+                  identityDecision:
+                    type: string
+                  businessDecision:
+                    type: string
+                  rationale:
+                    type: string
+                  reusableUntil:
+                    anyOf:
+                    - type: string
+                      format: date-time
+                    - type: 'null'
+                  reusedRuleId:
+                    anyOf:
+                    - type: string
+                      format: uuid
+                    - type: 'null'
+                  actorId:
+                    type: string
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                - id
+                - screeningId
+                - sourceId
+                - recordId
+                - identityDecision
+                - businessDecision
+                - rationale
+                - reusableUntil
+                - reusedRuleId
+                - actorId
+                - updatedAt
+            subject:
+              anyOf:
+              - $ref: '#/components/schemas/Subject'
+              - type: 'null'
+            originCorrection:
+              anyOf:
+              - type: object
+                properties:
+                  caseId:
+                    type: string
+                    format: uuid
+                  screeningId:
+                    type: string
+                    format: uuid
+                required:
+                - caseId
+                - screeningId
+              - type: 'null'
+            evidence:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  screeningId:
+                    type: string
+                    format: uuid
+                  sourceId:
+                    type: string
+                  recordId:
+                    type: string
+                  field:
+                    type: string
+                  value:
+                    type: string
+                  sourceReference:
+                    type: string
+                  verification:
+                    type: string
+                    enum:
+                    - unverified
+                    - verified
+                  comparison:
+                    type: string
+                    enum:
+                    - agrees
+                    - conflicts
+                    - unknown
+                  notes:
+                    type: string
+                  content:
+                    type: string
+                  actorId:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                  expiresAt:
+                    anyOf:
+                    - type: string
+                      format: date-time
+                    - type: 'null'
+                required:
+                - id
+                - screeningId
+                - sourceId
+                - recordId
+                - field
+                - value
+                - sourceReference
+                - verification
+                - comparison
+                - notes
+                - content
+                - actorId
+                - createdAt
+                - expiresAt
+            corrections:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  screeningId:
+                    type: string
+                    format: uuid
+                  resultScreeningId:
+                    type: string
+                    format: uuid
+                  resultCaseId:
+                    anyOf:
+                    - type: string
+                      format: uuid
+                    - type: 'null'
+                  before:
+                    $ref: '#/components/schemas/Subject'
+                  after:
+                    $ref: '#/components/schemas/Subject'
+                  reason:
+                    type: string
+                  actorId:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                  expiresAt:
+                    anyOf:
+                    - type: string
+                      format: date-time
+                    - type: 'null'
+                required:
+                - id
+                - screeningId
+                - resultScreeningId
+                - resultCaseId
+                - before
+                - after
+                - reason
+                - actorId
+                - createdAt
+                - expiresAt
+            reviewHistory:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  screeningId:
+                    type: string
+                    format: uuid
+                  sourceId:
+                    type: string
+                  recordId:
+                    type: string
+                  review:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      screeningId:
+                        type: string
+                        format: uuid
+                      sourceId:
+                        type: string
+                      recordId:
+                        type: string
+                      identityDecision:
+                        type: string
+                      businessDecision:
+                        type: string
+                      rationale:
+                        type: string
+                      reusableUntil:
+                        anyOf:
+                        - type: string
+                          format: date-time
+                        - type: 'null'
+                      reusedRuleId:
+                        anyOf:
+                        - type: string
+                          format: uuid
+                        - type: 'null'
+                      actorId:
+                        type: string
+                      updatedAt:
+                        type: string
+                        format: date-time
+                    required:
+                    - id
+                    - screeningId
+                    - sourceId
+                    - recordId
+                    - identityDecision
+                    - businessDecision
+                    - rationale
+                    - reusableUntil
+                    - reusedRuleId
+                    - actorId
+                    - updatedAt
+                  replacedBy:
+                    type: string
+                  reason:
+                    type: string
+                    enum:
+                    - decision_updated
+                    - evidence_added
+                    - subject_corrected
+                    - rule_challenged
+                  createdAt:
+                    type: string
+                    format: date-time
+                  expiresAt:
+                    anyOf:
+                    - type: string
+                      format: date-time
+                    - type: 'null'
+                required:
+                - id
+                - screeningId
+                - sourceId
+                - recordId
+                - review
+                - replacedBy
+                - reason
+                - createdAt
+                - expiresAt
+            comments:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  body:
+                    type: string
+                  actorId:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                required:
+                - id
+                - body
+                - actorId
+                - createdAt
+            attachments:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  title:
+                    type: string
+                  sha256:
+                    type: string
+                  size:
+                    type: integer
+                    minimum: 0
+                  actorId:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                  expiresAt:
+                    anyOf:
+                    - type: string
+                      format: date-time
+                    - type: 'null'
+                required:
+                - id
+                - title
+                - sha256
+                - size
+                - actorId
+                - createdAt
+                - expiresAt
+          required:
+          - id
+          - screeningId
+          - counterpartyId
+          - decision
+          - revision
+          - assigneeId
+          - priority
+          - dueAt
+          - escalatedAt
+          - requiresSecondReview
+          - reviewState
+          - businessDisposition
+          - reviewStartedAt
+          - supersededByScreeningId
+          - supersededByCaseId
+          - approvalRequiredByPolicy
+          - approvalRequiredForActions
+          - approverRoles
+          - reviewConcern
+          - policyContext
+          - decisionHistory
+          - decisionHistoryTruncated
+          - checks
+          - checkHistory
+          - reuseChallenges
+          - submittedBy
+          - approvedBy
+          - matches
+          - subject
+          - originCorrection
+          - evidence
+          - corrections
+          - reviewHistory
+          - comments
+          - attachments
+        evidence:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              createdAt:
+                type: string
+                format: date-time
+              expiresAt:
+                anyOf:
+                - type: string
+                  format: date-time
+                - type: 'null'
+              expired:
+                type: boolean
+              subject:
+                anyOf:
+                - $ref: '#/components/schemas/Subject'
+                - type: 'null'
+              result:
+                anyOf:
+                - $ref: '#/components/schemas/ScreeningResult'
+                - type: 'null'
+            required:
+            - id
+            - createdAt
+            - expiresAt
+            - expired
+            - subject
+            - result
+        decisions:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              actorId:
+                type: string
+              decision:
+                type: string
+              businessDisposition:
+                type: string
+                enum:
+                - pending
+                - allow
+                - restrict
+                - escalate
+              appliedControls:
+                anyOf:
+                - $ref: '#/components/schemas/AppliedDecisionControls'
+                - type: 'null'
+              notes:
+                anyOf:
+                - type: string
+                - type: 'null'
+              createdAt:
+                type: string
+                format: date-time
+              screeningId:
+                anyOf:
+                - type: string
+                  format: uuid
+                - type: 'null'
+              evidenceExpired:
+                type: boolean
+            required:
+            - id
+            - actorId
+            - decision
+            - businessDisposition
+            - appliedControls
+            - notes
+            - createdAt
+            - screeningId
+            - evidenceExpired
+        attachments:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              title:
+                type: string
+              sha256:
+                type: string
+              content:
+                type: string
+              createdAt:
+                type: string
+                format: date-time
+            required:
+            - id
+            - title
+            - sha256
+            - content
+            - createdAt
+        documents:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              title:
+                type: string
+              url:
+                type: string
+              repository:
+                type: string
+              documentVersion:
+                type: string
+              sha256:
+                anyOf:
+                - type: string
+                - type: 'null'
+              provenance:
+                type: string
+              verification:
+                type: string
+                enum:
+                - unverified
+                - reviewer_verified
+              verifiedAt:
+                anyOf:
+                - type: string
+                  format: date-time
+                - type: 'null'
+              actorId:
+                type: string
+              createdAt:
+                type: string
+                format: date-time
+            required:
+            - id
+            - title
+            - url
+            - repository
+            - documentVersion
+            - sha256
+            - provenance
+            - verification
+            - verifiedAt
+            - actorId
+            - createdAt
+        holds:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              reason:
+                type: string
+              until:
+                anyOf:
+                - type: string
+                  format: date-time
+                - type: 'null'
+              releasedAt:
+                anyOf:
+                - type: string
+                  format: date-time
+                - type: 'null'
+              releasedBy:
+                anyOf:
+                - type: string
+                - type: 'null'
+              releaseReason:
+                anyOf:
+                - type: string
+                - type: 'null'
+            required:
+            - id
+            - reason
+            - until
+            - releasedAt
+        limitations:
+          type: array
+          items:
+            type: string
+      required:
+      - format
+      - generatedAt
+      - environment
+      - investigation
+      - evidence
+      - decisions
+      - attachments
+      - documents
+      - holds
+      - limitations
+    ArchiveExpiredRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        expired:
+          const: true
+        decision:
+          type: string
+        business_disposition:
+          type: string
+        actor_id:
+          type: string
+        applied_controls:
+          anyOf:
+          - $ref: '#/components/schemas/AppliedDecisionControls'
+          - type: 'null'
+      required:
+      - id
+      - created_at
+      - expires_at
+      - expired
+      description: Expired archive content is replaced by this metadata. Review records use their last updated time as created_at. Decisions additionally retain decision, business_disposition, actor_id and applied_controls. No subject or evidence is reconstructed.
+    CaseGovernance:
+      type: object
+      properties:
+        retention:
+          type: object
+          properties:
+            trigger:
+              type: string
+              enum:
+              - review_completed
+              - relationship_ended
+              - business_event
+            eventAt:
+              anyOf:
+              - type: string
+                format: date-time
+              - type: 'null'
+            eventReason:
+              anyOf:
+              - type: string
+              - type: 'null'
+            eventActor:
+              anyOf:
+              - type: string
+              - type: 'null'
+            closedAt:
+              anyOf:
+              - type: string
+                format: date-time
+              - type: 'null'
+            expiresAt:
+              anyOf:
+              - type: string
+                format: date-time
+              - type: 'null'
+          required:
+          - trigger
+          - eventAt
+          - eventReason
+          - eventActor
+          - closedAt
+          - expiresAt
+        holds:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              reason:
+                type: string
+              actorId:
+                type: string
+              createdAt:
+                type: string
+                format: date-time
+              until:
+                anyOf:
+                - type: string
+                  format: date-time
+                - type: 'null'
+              releasedAt:
+                anyOf:
+                - type: string
+                  format: date-time
+                - type: 'null'
+              releasedBy:
+                anyOf:
+                - type: string
+                - type: 'null'
+              releaseReason:
+                anyOf:
+                - type: string
+                - type: 'null'
+            required:
+            - id
+            - reason
+            - actorId
+            - createdAt
+            - until
+            - releasedAt
+            - releasedBy
+            - releaseReason
+        documents:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              screeningId:
+                type: string
+                format: uuid
+              title:
+                type: string
+              url:
+                type: string
+              repository:
+                type: string
+              documentVersion:
+                type: string
+              sha256:
+                anyOf:
+                - type: string
+                - type: 'null'
+              provenance:
+                type: string
+              verification:
+                type: string
+                enum:
+                - unverified
+                - reviewer_verified
+              verifiedAt:
+                anyOf:
+                - type: string
+                  format: date-time
+                - type: 'null'
+              actorId:
+                type: string
+              createdAt:
+                type: string
+                format: date-time
+            required:
+            - id
+            - screeningId
+            - title
+            - url
+            - repository
+            - documentVersion
+            - sha256
+            - provenance
+            - verification
+            - verifiedAt
+            - actorId
+            - createdAt
+        documentsTruncated:
+          type: boolean
+        documentHosts:
+          type: array
+          items:
+            type: string
+        documentRepositories:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              url:
+                type: string
+            required:
+            - name
+            - url
+      required:
+      - retention
+      - holds
+      - documents
+      - documentsTruncated
+      - documentHosts
+      - documentRepositories
+    Coverage:
+      type: object
+      required:
+      - sourceId
+      - version
+      - retrievedAt
+      - fresh
+      properties:
+        sourceId:
+          type: string
+        version:
+          type: string
+        retrievedAt:
+          type: string
+          format: date-time
+        publishedAt:
+          oneOf:
+          - type: string
+            format: date
+          - type: string
+            format: date-time
+          description: Authority-supplied publication date (YYYY-MM-DD) or RFC 3339 timestamp, preserving the precision supplied by the publisher. A date-only value does not imply midnight or a timezone. Omitted when no genuine publication date or timestamp is supplied.
+        fresh:
+          type: boolean
+        sourceNotice:
+          $ref: '#/components/schemas/SourceNotice'
+          description: Included in new production screening results, including no-match results. Absent from synthetic sandbox coverage and older retained evidence; historical evidence is not rewritten.
+    Error:
+      type: object
+      required:
+      - error
+      description: Failure envelope for every documented non-2xx API response. No data property is returned. Switch on error.code; messages may change.
+      properties:
+        error:
+          type: object
+          required:
+          - code
+          - message
+          - requestId
+          properties:
+            code:
+              type: string
+              description: Machine-readable failure code. See this operation’s status-specific examples for codes and recovery.
+            message:
+              type: string
+              description: Human-readable explanation. Do not parse this text to control application behavior.
+            requestId:
+              type: string
+              format: uuid
+              description: Server correlation ID, also returned in X-Request-Id. Include this ID in support requests.
+            details:
+              description: Optional JSON details for client and validation failures. Validation failures return an array of { path, message } issues; other 4xx codes may return a code-specific object. Server failures omit details. Never assume this key is present.
+              anyOf:
+              - type: array
+                maxItems: 50
+                items:
+                  type: object
+                  required:
+                  - path
+                  - message
+                  properties:
+                    path:
+                      type: string
+                      maxLength: 160
+                      description: Dot-separated invalid field path, including array indexes.
+                    message:
+                      type: string
+                      maxLength: 300
+                      description: Validation problem for this field.
+              - type: object
+                additionalProperties: true
+              - type:
+                - string
+                - number
+                - boolean
+                - 'null'
+            detailsTruncated:
+              type: boolean
+              description: True when only the first 50 validation issues are returned. Validation paths and messages are bounded.
+    ArchiveCorrection:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+        environment:
+          type: string
+        case_id:
+          type: string
+          format: uuid
+        screening_id:
+          type: string
+          format: uuid
+        result_screening_id:
+          type: string
+          format: uuid
+        result_case_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        before_subject:
+          $ref: '#/components/schemas/Subject'
+        after_subject:
+          $ref: '#/components/schemas/Subject'
+        reason:
+          type: string
+        actor_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+      required:
+      - id
+      - organization_id
+      - environment
+      - case_id
+      - screening_id
+      - result_screening_id
+      - result_case_id
+      - before_subject
+      - after_subject
+      - reason
+      - actor_id
+      - created_at
+      - expires_at
+      description: Retained record for archive category corrections. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
+    ArchiveHold:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+        environment:
+          type: string
+        case_id:
+          type: string
+          format: uuid
+        screening_ids:
+          type: array
+          items:
+            type: string
+        reason:
+          type: string
+        actor_id:
+          type: string
+        until_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        released_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        released_by:
+          anyOf:
+          - type: string
+          - type: 'null'
+        release_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - organization_id
+      - environment
+      - case_id
+      - screening_ids
+      - actor_id
+      - until_at
+      - released_at
+      - released_by
+      - created_at
+      description: Retained record for archive category holds. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
+    ArchiveComment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+        environment:
+          type: string
+        case_id:
+          type: string
+          format: uuid
+        screening_id:
+          type: string
+          format: uuid
+        body:
+          type: string
+        actor_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+      required:
+      - id
+      - organization_id
+      - environment
+      - case_id
+      - screening_id
+      - body
+      - actor_id
+      - created_at
+      - expires_at
+      description: Retained record for archive category comments. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
+    AppliedDecisionControls:
+      type: object
+      properties:
+        governanceRevision:
+          type: integer
+          minimum: 1
+        organizationApproval:
+          $schema: https://json-schema.org/draft/2020-12/schema
+          type: object
+          properties:
+            requireSecondReview:
+              default: false
+              type: boolean
+            secondReviewFor:
+              default: []
+              maxItems: 4
+              type: array
+              items:
+                type: string
+                enum:
+                - same_identity
+                - allow
+                - restrict
+                - escalate
+            approverRoles:
+              default:
+              - owner
+              - admin
+              - analyst
+              minItems: 1
+              maxItems: 3
+              type: array
+              items:
+                type: string
+                enum:
+                - owner
+                - admin
+                - analyst
+          additionalProperties: false
+          required:
+          - requireSecondReview
+          - secondReviewFor
+          - approverRoles
+        restrictedRoles:
+          type: object
+          properties:
+            approval:
+              type: array
+              items:
+                type: string
+                enum:
+                - analyst
+                - developer
+                - viewer
+            production:
+              type: array
+              items:
+                type: string
+                enum:
+                - analyst
+                - developer
+                - viewer
+          required:
+          - approval
+          - production
+          additionalProperties: false
+        screeningPolicy:
+          anyOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              version:
+                type: integer
+                minimum: 1
+              review:
+                $schema: https://json-schema.org/draft/2020-12/schema
+                type: object
+                properties:
+                  requireSecondReview:
+                    default: false
+                    type: boolean
+                  secondReviewFor:
+                    default: []
+                    maxItems: 4
+                    type: array
+                    items:
+                      type: string
+                      enum:
+                      - same_identity
+                      - allow
+                      - restrict
+                      - escalate
+                  approverRoles:
+                    default:
+                    - owner
+                    - admin
+                    - analyst
+                    minItems: 1
+                    maxItems: 3
+                    type: array
+                    items:
+                      type: string
+                      enum:
+                      - owner
+                      - admin
+                      - analyst
+                additionalProperties: false
+                required:
+                - requireSecondReview
+                - secondReviewFor
+                - approverRoles
+            required:
+            - id
+            - version
+            - review
+            additionalProperties: false
+          - type: 'null'
+      required:
+      - governanceRevision
+      - organizationApproval
+      - restrictedRoles
+      - screeningPolicy
+      additionalProperties: false
+      description: Immutable decision-time approval configuration. A null appliedControls value on a decision means no historic snapshot is available; current settings are never substituted. Notification recipients and document hosts are excluded.
+    ArchiveScreening:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+        environment:
+          type: string
+        subject:
+          anyOf:
+          - $ref: '#/components/schemas/Subject'
+          - type: 'null'
+        request:
+          anyOf:
+          - $ref: '#/components/schemas/ScreeningRequest'
+          - type: 'null'
+        result:
+          $ref: '#/components/schemas/ScreeningResult'
+        dataset_id:
+          type: string
+        retention:
+          type: string
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        retention_expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        created_at:
+          type: string
+          format: date-time
+        counterparty_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+      required:
+      - id
+      - organization_id
+      - environment
+      - subject
+      - request
+      - result
+      - dataset_id
+      - retention
+      - expires_at
+      - retention_expires_at
+      - created_at
+      - counterparty_id
+      description: Retained record for archive category screenings. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
+    ArchiveReuseRule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+        environment:
+          type: string
+        counterparty_id:
+          type: string
+          format: uuid
+        case_id:
+          type: string
+          format: uuid
+        screening_id:
+          type: string
+          format: uuid
+        source_id:
+          type: string
+        record_id:
+          type: string
+        fingerprint:
+          type: string
+        rationale:
+          type: string
+        approved_by:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        revoked_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        revoked_by:
+          anyOf:
+          - type: string
+          - type: 'null'
+        revoked_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+        challenged_case_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        affected_case_ids:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - organization_id
+      - environment
+      - counterparty_id
+      - case_id
+      - screening_id
+      - source_id
+      - record_id
+      - fingerprint
+      - rationale
+      - approved_by
+      - expires_at
+      - revoked_at
+      - revoked_by
+      - revoked_reason
+      - challenged_case_id
+      - affected_case_ids
+      - created_at
+      description: Retained record for archive category reuseRules. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
+    ScreeningResult:
+      type: object
+      required:
+      - id
+      - environment
+      - status
+      - createdAt
+      - matches
+      - coverage
+      - versions
+      - disclaimer
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Screening UUID; use it to retrieve retained result/evidence and locate linked review cases.
+        environment:
+          enum:
+          - sandbox
+          - production
+          description: Environment owned by the API key. Sandbox evidence is synthetic.
+        status:
+          enum:
+          - potential_match
+          - no_match
+          description: potential_match requires review of candidates; no_match means no returned candidates within the selected coverage and matching rules. Neither is a business approval or legal clearance.
+        createdAt:
+          type: string
+          format: date-time
+          description: Screening creation timestamp in ISO 8601 UTC.
+        matches:
+          type: array
+          items:
+            type: object
+            required:
+            - record
+            - score
+            - evidence
+            - conflicts
+            properties:
+              record:
+                $ref: '#/components/schemas/SourceRecord'
+              score:
+                type: number
+                minimum: 0
+                maximum: 100
+                description: Legacy composite review score retained for compatibility. Use assessment.name.similarity for name similarity and assessment for corroboration and conflicts. Not a probability of identity or wrongdoing.
+              assessment:
+                $ref: '#/components/schemas/MatchAssessment'
+              evidence:
+                type: array
+                items:
+                  type: object
+                  required:
+                  - field
+                  - queryValue
+                  - sourceValue
+                  - method
+                  - contribution
+                  - explanation
+                  properties:
+                    field:
+                      type: string
+                    queryValue:
+                      type: string
+                    sourceValue:
+                      type: string
+                    method:
+                      type: string
+                    contribution:
+                      type: number
+                    explanation:
+                      type: string
+              conflicts:
+                type: array
+                items:
+                  type: string
+          description: Candidate records with field evidence and conflicts. Always an array; empty for no_match. No silent truncation is performed.
+        coverage:
+          type: array
+          items:
+            $ref: '#/components/schemas/Coverage'
+          description: Exact source versions used, including freshness and retained publisher notices. Always present, including no_match.
+        versions:
+          type: object
+          required:
+          - dataset
+          - matchingEngine
+          - policy
+          properties:
+            dataset:
+              type: string
+            matchingEngine:
+              type: string
+            policy:
+              type: string
+            package:
+              type: string
+          description: Dataset, matching engine and policy versions used for this result. package is included only for package-based coverage.
+        disclaimer:
+          type: string
+          description: Interpretation limits supplied with this result; preserve them when presenting or exporting evidence.
+        policySnapshot:
+          $ref: '#/components/schemas/ScreeningPolicySnapshot'
+          description: Immutable organization policy applied at screening time, when one was selected. Omitted when no organization policy applied.
+        matching:
+          $ref: '#/components/schemas/AppliedMatchingPolicy'
+          description: Applied Standard or Focused alert profile, comparison thresholds and retrieval version. Saved with new results, including no-match results; omitted on historical results without this evidence. Select sensitivity through an approved screening policy, not an arbitrary request-level cutoff.
+      description: Result returned by POST /screenings and plain GET /results items. Its required fields are always present. A successful result is either potential_match or no_match; failures use the Error envelope instead.
+    SourceNotice:
+      type: object
+      required:
+      - text
+      - sourceUrl
+      - termsUrl
+      properties:
+        text:
+          type: string
+          description: Required publisher attribution and reuse notices captured when screening runs.
+        sourceUrl:
+          type: string
+          format: uri
+        termsUrl:
+          type: string
+          format: uri
+        licenseUrl:
+          type: string
+          format: uri
+          description: Only included for a reviewed explicit license instrument.
+        databaseDownloadUrl:
+          type: string
+          format: uri-reference
+          description: Free complete derivative database for the exact immutable source version, where required. A relative path resolves against this API origin.
+    AppliedMatchingPolicy:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      type: object
+      properties:
+        version:
+          type: string
+        profile:
+          type: string
+          enum:
+          - standard
+          - focused
+        nameThreshold:
+          type: integer
+          minimum: 0
+          maximum: 100
+        corroboratedNameThreshold:
+          type: integer
+          minimum: 0
+          maximum: 100
+        retrievalVersion:
+          type: string
+      required:
+      - version
+      - profile
+      - nameThreshold
+      - corroboratedNameThreshold
+      - retrievalVersion
+      additionalProperties: false
+      description: Effective matching profile and retrieval version retained at screening, including no-match results. Historical results can omit this snapshot. Profiles filter alerts within the same candidate retrieval; they are not population-calibrated probabilities.
+    CaseArchiveSegment:
+      type: object
+      properties:
+        format:
+          const: sanctionskit-case-archive@1
+        caseId:
+          type: string
+          format: uuid
+        revision:
+          type: integer
+          minimum: 0
+        asOf:
+          type: string
+          format: date-time
+        segment:
+          type: integer
+          minimum: 0
+        category:
+          type: string
+          enum:
+          - case
+          - screenings
+          - decisions
+          - reviews
+          - reviewHistory
+          - comments
+          - attachments
+          - findings
+          - corrections
+          - checks
+          - documents
+          - holds
+          - reuseRules
+          - audit
+        records:
+          type: array
+          items:
+            anyOf:
+            - $ref: '#/components/schemas/ArchiveCase'
+            - $ref: '#/components/schemas/ArchiveScreening'
+            - $ref: '#/components/schemas/ArchiveDecision'
+            - $ref: '#/components/schemas/ArchiveReview'
+            - $ref: '#/components/schemas/ArchiveReviewHistory'
+            - $ref: '#/components/schemas/ArchiveComment'
+            - $ref: '#/components/schemas/ArchiveAttachment'
+            - $ref: '#/components/schemas/ArchiveFinding'
+            - $ref: '#/components/schemas/ArchiveCorrection'
+            - $ref: '#/components/schemas/ArchiveCheck'
+            - $ref: '#/components/schemas/ArchiveDocument'
+            - $ref: '#/components/schemas/ArchiveHold'
+            - $ref: '#/components/schemas/ArchiveReuseRule'
+            - $ref: '#/components/schemas/ArchiveAuditEvent'
+            - $ref: '#/components/schemas/ArchiveExpiredRecord'
+          description: 'Record shape follows category: case → ArchiveCase, screenings → ArchiveScreening, decisions → ArchiveDecision, reviews → ArchiveReview, reviewHistory → ArchiveReviewHistory, comments → ArchiveComment, attachments → ArchiveAttachment, findings → ArchiveFinding, corrections → ArchiveCorrection, checks → ArchiveCheck, documents → ArchiveDocument, holds → ArchiveHold, reuseRules → ArchiveReuseRule, audit → ArchiveAuditEvent. Expired content is replaced by ArchiveExpiredRecord. Non-case segments contain at most 25 records and may be empty while advancing to the next category.'
+        nextCursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+        complete:
+          type: boolean
+        limitations:
+          type: array
+          items:
+            type: string
+      required:
+      - format
+      - caseId
+      - revision
+      - asOf
+      - segment
+      - category
+      - records
+      - nextCursor
+      - complete
+      - limitations
+    ArchiveCheck:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+        environment:
+          type: string
+        case_id:
+          type: string
+          format: uuid
+        screening_id:
+          type: string
+          format: uuid
+        label:
+          type: string
+        status:
+          type: string
+        evidence_reference:
+          type: string
+        rationale:
+          type: string
+        actor_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+      required:
+      - id
+      - organization_id
+      - environment
+      - case_id
+      - screening_id
+      - label
+      - status
+      - evidence_reference
+      - rationale
+      - actor_id
+      - created_at
+      - expires_at
+      description: Retained record for archive category checks. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
+    OperationsReport:
+      type: object
+      properties:
+        timeZone:
+          type: string
+          description: Captured calendar timezone used for this report range.
+        from:
+          type: string
+        to:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+        screenings:
+          type: object
+          properties:
+            total:
+              type: integer
+              minimum: 0
+            potentialMatches:
+              type: integer
+              minimum: 0
+            noMatches:
+              type: integer
+              minimum: 0
+            expired:
+              type: integer
+              minimum: 0
+          required:
+          - total
+          - potentialMatches
+          - noMatches
+          - expired
+        cases:
+          type: object
+          properties:
+            open:
+              type: integer
+              minimum: 0
+            confirmed:
+              type: integer
+              minimum: 0
+            dismissed:
+              type: integer
+              minimum: 0
+            overdue:
+              type: integer
+              minimum: 0
+            pendingApproval:
+              type: integer
+              minimum: 0
+            unassigned:
+              type: integer
+              minimum: 0
+          required:
+          - open
+          - confirmed
+          - dismissed
+          - overdue
+          - pendingApproval
+          - unassigned
+        monitoring:
+          type: object
+          properties:
+            active:
+              type: integer
+              minimum: 0
+            paused:
+              type: integer
+              minimum: 0
+            overdue:
+              type: integer
+              minimum: 0
+            failed:
+              type: integer
+              minimum: 0
+            unread:
+              type: integer
+              minimum: 0
+          required:
+          - active
+          - paused
+          - overdue
+          - failed
+          - unread
+        reviews:
+          type: object
+          properties:
+            total:
+              type: integer
+              minimum: 0
+            reused:
+              type: integer
+              minimum: 0
+            medianHours:
+              anyOf:
+              - type: number
+              - type: 'null'
+          required:
+          - total
+          - reused
+          - medianHours
+        reviewers:
+          type: array
+          items:
+            type: object
+            properties:
+              actorId:
+                type: string
+              actorEmail:
+                type: string
+              decisions:
+                type: integer
+                minimum: 0
+            required:
+            - actorId
+            - decisions
+        sourceCoverage:
+          type: array
+          items:
+            type: object
+            properties:
+              sourceId:
+                type: string
+              screenings:
+                type: integer
+                minimum: 0
+            required:
+            - sourceId
+            - screenings
+        expiringEvidence:
+          type: array
+          items:
+            type: object
+            properties:
+              screeningId:
+                type: string
+                format: uuid
+              expiresAt:
+                type: string
+                format: date-time
+              caseId:
+                anyOf:
+                - type: string
+                  format: uuid
+                - type: 'null'
+            required:
+            - screeningId
+            - expiresAt
+            - caseId
+        limitations:
+          type: array
+          items:
+            type: string
+      required:
+      - timeZone
+      - from
+      - to
+      - generatedAt
+      - screenings
+      - cases
+      - monitoring
+      - reviews
+      - reviewers
+      - sourceCoverage
+      - expiringEvidence
+      - limitations
+    ArchiveReview:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+        environment:
+          type: string
+        case_id:
+          type: string
+          format: uuid
+        screening_id:
+          type: string
+          format: uuid
+        source_id:
+          type: string
+        record_id:
+          type: string
+        identity_decision:
+          type: string
+        business_decision:
+          type: string
+        rationale:
+          type: string
+        reusable_until:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        reused_rule_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        actor_id:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+      required:
+      - id
+      - organization_id
+      - environment
+      - case_id
+      - screening_id
+      - source_id
+      - record_id
+      - identity_decision
+      - business_decision
+      - rationale
+      - reusable_until
+      - reused_rule_id
+      - actor_id
+      - updated_at
+      - expires_at
+      description: Retained record for archive category reviews. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
+    ArchiveReviewHistory:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+        environment:
+          type: string
+        case_id:
+          type: string
+          format: uuid
+        screening_id:
+          type: string
+          format: uuid
+        source_id:
+          type: string
+        record_id:
+          type: string
+        review:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            screeningId:
+              type: string
+              format: uuid
+            sourceId:
+              type: string
+            recordId:
+              type: string
+            identityDecision:
+              type: string
+              enum:
+              - unresolved
+              - same
+              - different
+            businessDecision:
+              type: string
+              enum:
+              - pending
+              - allow
+              - restrict
+              - escalate
+            rationale:
+              type: string
+            reusableUntil:
+              anyOf:
+              - type: string
+                format: date-time
+              - type: 'null'
+            reusedRuleId:
+              anyOf:
+              - type: string
+                format: uuid
+              - type: 'null'
+            actorId:
+              type: string
+            updatedAt:
+              type: string
+              format: date-time
+            reuse:
+              type: object
+              properties:
+                caseId:
+                  type: string
+                  format: uuid
+                screeningId:
+                  type: string
+                  format: uuid
+                approvedBy:
+                  type: string
+                expiresAt:
+                  type: string
+                  format: date-time
+                revokedAt:
+                  anyOf:
+                  - type: string
+                    format: date-time
+                  - type: 'null'
+              required:
+              - caseId
+              - screeningId
+              - approvedBy
+              - expiresAt
+              - revokedAt
+          required:
+          - id
+          - screeningId
+          - sourceId
+          - recordId
+          - identityDecision
+          - businessDecision
+          - rationale
+          - reusableUntil
+          - reusedRuleId
+          - actorId
+          - updatedAt
+        replaced_by:
+          type: string
+        reason:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+      required:
+      - id
+      - organization_id
+      - environment
+      - case_id
+      - screening_id
+      - source_id
+      - record_id
+      - review
+      - replaced_by
+      - reason
+      - created_at
+      - expires_at
+      description: Retained record for archive category reviewHistory. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
+    ArchiveDecision:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+        case_id:
+          type: string
+          format: uuid
+        actor_id:
+          type: string
+        decision:
+          type: string
+        business_disposition:
+          type: string
+        review_started_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        applied_controls:
+          anyOf:
+          - $ref: '#/components/schemas/AppliedDecisionControls'
+          - type: 'null'
+        notes:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+      required:
+      - id
+      - organization_id
+      - case_id
+      - actor_id
+      - decision
+      - business_disposition
+      - review_started_at
+      - applied_controls
+      - notes
+      - created_at
+      - expires_at
+      description: Retained record for archive category decisions. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
+    ArchiveAuditEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+        actor_id:
+          type: string
+        action:
+          type: string
+        resource_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+        details:
+          description: Retained category-specific JSON value; keys may vary by event or historical version.
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+      required:
+      - id
+      - organization_id
+      - actor_id
+      - action
+      - resource_id
+      - details
+      - created_at
+      - expires_at
+      description: Retained record for archive category audit. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
+    ScreeningPolicySnapshot:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        purpose:
+          type: string
+          minLength: 3
+          maxLength: 1000
+        jurisdictions:
+          minItems: 1
+          maxItems: 30
+          type: array
+          items:
+            type: string
+            minLength: 2
+            maxLength: 100
+        matching:
+          type: object
+          properties:
+            profile:
+              type: string
+              enum:
+              - standard
+              - focused
+          required:
+          - profile
+          additionalProperties: false
+        requiredSources:
+          default: {}
+          type: object
+          propertyNames:
+            type: string
+            enum:
+            - person
+            - organization
+            - vessel
+            - aircraft
+            - other
+          additionalProperties:
+            maxItems: 512
+            type: array
+            items:
+              type: string
+              minLength: 1
+              maxLength: 80
+        optionalSources:
+          default: {}
+          type: object
+          propertyNames:
+            type: string
+            enum:
+            - person
+            - organization
+            - vessel
+            - aircraft
+            - other
+          additionalProperties:
+            maxItems: 512
+            type: array
+            items:
+              type: string
+              minLength: 1
+              maxLength: 80
+        exclusions:
+          default: []
+          maxItems: 30
+          type: array
+          items:
+            type: string
+            minLength: 3
+            maxLength: 500
+        externalChecks:
+          default: []
+          maxItems: 20
+          type: array
+          items:
+            type: string
+            minLength: 3
+            maxLength: 200
+        externalCheckGuidance:
+          maxItems: 20
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+                minLength: 3
+                maxLength: 200
+              instructions:
+                type: string
+                minLength: 3
+                maxLength: 2000
+              evidenceExample:
+                type: string
+                minLength: 3
+                maxLength: 1000
+            required:
+            - label
+            - instructions
+            additionalProperties: false
+        review:
+          default: {}
+          type: object
+          properties:
+            requireSecondReview:
+              default: false
+              type: boolean
+            secondReviewFor:
+              default: []
+              maxItems: 4
+              type: array
+              items:
+                type: string
+                enum:
+                - same_identity
+                - allow
+                - restrict
+                - escalate
+            approverRoles:
+              default:
+              - owner
+              - admin
+              - analyst
+              minItems: 1
+              maxItems: 3
+              type: array
+              items:
+                type: string
+                enum:
+                - owner
+                - admin
+                - analyst
+          additionalProperties: false
+        monitoringIntervalHours:
+          default: 24
+          anyOf:
+          - type: number
+            const: 6
+          - type: number
+            const: 24
+          - type: number
+            const: 168
+        retentionTrigger:
+          default: review_completed
+          type: string
+          enum:
+          - review_completed
+          - relationship_ended
+          - business_event
+        id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          minimum: 0
+        environment:
+          type: string
+          enum:
+          - sandbox
+          - production
+        createdAt:
+          type: string
+          format: date-time
+      required:
+      - name
+      - purpose
+      - jurisdictions
+      - requiredSources
+      - optionalSources
+      - exclusions
+      - externalChecks
+      - review
+      - monitoringIntervalHours
+      - retentionTrigger
+      - id
+      - version
+      - environment
+      - createdAt
+      additionalProperties: false
+    Subject:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 300
+          description: Name to compare with publisher records. Leading and trailing whitespace is removed; provide the fullest reliable name available.
+        entityType:
+          default: person
+          type: string
+          enum:
+          - person
+          - organization
+          - vessel
+          - aircraft
+          - other
+          description: Type of subject. Defaults to person when omitted. Every selected source must support this type.
+        identifiers:
+          default: []
+          maxItems: 20
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                minLength: 1
+                maxLength: 80
+                description: Identifier scheme, such as passport, national_id, registration, lei, imo or mmsi. Matching normalizes supported scheme aliases.
+              value:
+                type: string
+                minLength: 1
+                maxLength: 160
+                description: Identifier value. Send the original value; scheme-specific normalization is applied during matching.
+              issuer:
+                type: string
+                minLength: 1
+                maxLength: 100
+                description: Optional issuing authority or country. Omit when unknown; do not send null.
+            required:
+            - type
+            - value
+            additionalProperties: false
+          description: Typed identifiers used for exact matching, such as passport, national_id, registration, lei, imo or mmsi. Defaults to an empty array. Use the publisher’s identifier scheme; custom scheme names are accepted.
+        birthDate:
+          anyOf:
+          - type: string
+            pattern: ^(?!0000)\d{4}$
+          - type: string
+            pattern: ^(?!0000)\d{4}-(0[1-9]|1[0-2])$
+          - type: string
+            allOf:
+            - pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))$
+            - pattern: ^(?!0000)
+          description: 'Known date or partial date: YYYY, YYYY-MM or YYYY-MM-DD. Preserve known precision; do not invent a month or day. Year 0000 and invalid dates are rejected.'
+        country:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: Known country name or code used as supporting identity evidence. It is not a source-selection or geographic coverage filter.
+      required:
+      - name
+      additionalProperties: false
+    ArchiveCase:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+        environment:
+          type: string
+        screening_id:
+          type: string
+          format: uuid
+        monitor_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        decision:
+          type: string
+        business_disposition:
+          type: string
+        review_started_at:
+          type: string
+          format: date-time
+        superseded_by_screening_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        superseded_by_case_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        latest_screening_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        counterparty_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        assignee_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+        priority:
+          type: string
+        due_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        escalated_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        revision:
+          type: integer
+        requires_second_review:
+          type: boolean
+        review_state:
+          type: string
+        submitted_by:
+          anyOf:
+          - type: string
+          - type: 'null'
+        approved_by:
+          anyOf:
+          - type: string
+          - type: 'null'
+        submitted_screening_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        retention_policy:
+          type: string
+        retention_years:
+          anyOf:
+          - type: integer
+          - type: 'null'
+        retention_days:
+          anyOf:
+          - type: integer
+          - type: 'null'
+        closed_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        retention_expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        retention_trigger:
+          type: string
+        retention_event_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        retention_event_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+        retention_event_actor:
+          anyOf:
+          - type: string
+          - type: 'null'
+      required:
+      - id
+      - organization_id
+      - environment
+      - screening_id
+      - monitor_id
+      - decision
+      - business_disposition
+      - review_started_at
+      - superseded_by_screening_id
+      - superseded_by_case_id
+      - created_at
+      - updated_at
+      - latest_screening_id
+      - counterparty_id
+      - assignee_id
+      - priority
+      - due_at
+      - escalated_at
+      - revision
+      - requires_second_review
+      - review_state
+      - submitted_by
+      - approved_by
+      - submitted_screening_id
+      - retention_policy
+      - retention_years
+      - retention_days
+      - closed_at
+      - retention_expires_at
+      - retention_trigger
+      - retention_event_at
+      - retention_event_reason
+      - retention_event_actor
+      description: Retained record for archive category case. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
+    ArchiveAttachment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+        environment:
+          type: string
+        case_id:
+          type: string
+          format: uuid
+        screening_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        content:
+          type: string
+        sha256:
+          type: string
+        size:
+          type: integer
+        actor_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+      required:
+      - id
+      - organization_id
+      - environment
+      - case_id
+      - screening_id
+      - title
+      - content
+      - sha256
+      - size
+      - actor_id
+      - created_at
+      - expires_at
+      description: Retained record for archive category attachments. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: sk_test_... or sk_live_...
+x-docs-revision: 499779e00214c23622695c6d7114fb3656edf29161460d9f9e9d2ab65d0cf087

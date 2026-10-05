@@ -1,0 +1,3604 @@
+openapi: 3.2.0
+info:
+  title: SanctionsKit Review evidence API
+  version: 1.0.0
+  description: Explore success and error examples without an account or API key. Recorded examples use isolated synthetic application data; remaining examples are labeled contract fixtures. Potential-match screening is for review. No-match is limited to selected, qualified sources. Sandbox uses synthetic records and is never billed. Each successfully completed subject consumes one allowance unit, including monitoring rescreens. Failed rows and idempotent retries do not consume additional units.
+servers:
+- url: /api/v1
+  description: This site origin; deployment configuration and access rules apply
+tags:
+- name: Review evidence
+paths:
+  /cases:
+    get:
+      operationId: get__cases
+      summary: List analyst review cases
+      tags:
+      - Review evidence
+      description: 'Required API key scope: results:read.'
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: query
+        name: limit
+        description: Maximum number of items to return. A response may contain fewer items; use its next cursor to decide whether another page exists.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+      - in: query
+        name: cursor
+        description: Pass nextCursor from the previous page; omit for the first page. Continue until the response cursor is null. Keep the same filters between pages.
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: q
+        schema:
+          type: string
+          maxLength: 200
+        description: Search retained names or resource IDs.
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - potential_match
+          - no_match
+        description: Filter by screening outcome. On GET /results this is applied only with summary=true.
+      - in: query
+        name: review
+        schema:
+          type: string
+          enum:
+          - open
+          - confirmed
+          - dismissed
+          - unreviewed
+        description: Filter linked human decision state. unreviewed selects results without a case; it produces no items in case or audit lists. On GET /results requires summary=true.
+      - in: query
+        name: origin
+        schema:
+          type: string
+          enum:
+          - manual
+          - api
+          - batch
+          - monitor
+          - unknown
+        description: Filter screening origin. On GET /results this is applied only with summary=true.
+      - in: query
+        name: evidence
+        schema:
+          type: string
+          enum:
+          - available
+          - expired
+          - all
+          default: all
+        description: Filter using the latest case-linked screening evidence. Available requires a retained, nonempty result (including open-review protection); expired includes purged results. Defaults to all for historical compatibility. A screeningId lookup bypasses this filter.
+      - in: query
+        name: screeningId
+        schema:
+          type: string
+          format: uuid
+        description: Find cases linked to this screening, including expired history; bypasses the evidence filter.
+      responses:
+        '200':
+          headers:
+            X-Request-Id:
+              description: Server-generated request correlation identifier.
+              schema:
+                type: string
+                format: uuid
+          description: Successful response. JSON object with the required data key. All properties marked required are present, including keys whose value may be null. Unmarked properties can be omitted; clients should tolerate additional response properties.
+          content:
+            application/json:
+              examples:
+                recorded_page:
+                  summary: Synthetic review cases created by screening
+                  description: Recorded from the real application handler against an isolated synthetic database. IDs, times and nonfunctional temporary secrets are normalized. No customer data or live provider request.
+                  value:
+                    data:
+                      items:
+                      - id: 00000000-0000-4000-8000-000000000001
+                        environment: sandbox
+                        screening_id: 00000000-0000-4000-8000-000000000002
+                        latest_screening_id: null
+                        monitor_id: null
+                        counterparty_id: 00000000-0000-4000-8000-000000000003
+                        decision: open
+                        business_disposition: pending
+                        review_state: open
+                        review_started_at: '2026-09-17T12:00:00.000Z'
+                        revision: 1
+                        assignee_id: null
+                        priority: normal
+                        due_at: null
+                        escalated_at: null
+                        requires_second_review: false
+                        submitted_by: null
+                        approved_by: null
+                        submitted_screening_id: null
+                        superseded_by_screening_id: null
+                        superseded_by_case_id: null
+                        retention_policy: calendar_years
+                        retention_years: 10
+                        retention_days: null
+                        closed_at: null
+                        retention_expires_at: null
+                        retention_trigger: business_event
+                        retention_event_at: null
+                        retention_event_actor: null
+                        created_at: '2026-09-17T12:00:00.000Z'
+                        updated_at: '2026-09-17T12:00:00.000Z'
+                        retention_event_reason: null
+                        subjectName: Alex Morgan
+                        entityType: person
+                        origin: manual
+                        status: potential_match
+                        matchCount: 1
+                        evidenceAvailable: true
+                        retention: standard
+                        expiresAt: null
+                      nextCursor: null
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CasePage'
+        '400':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**invalid_request** — Correct the request fields, resource identifiers, JSON body or query parameters before retrying.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_request:
+                  summary: invalid request
+                  description: Synthetic error example. Correct the request fields, resource identifiers, JSON body or query parameters before retrying.
+                  value:
+                    error:
+                      code: invalid_request
+                      message: The request is invalid.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '401':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            WWW-Authenticate:
+              schema:
+                type: string
+              description: Bearer authentication challenge.
+          description: '**authentication_required** — Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.
+
+
+            **invalid_api_key** — Use an active key for the intended environment.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                authentication_required:
+                  summary: authentication required
+                  description: 'Synthetic error example. Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.'
+                  value:
+                    error:
+                      code: authentication_required
+                      message: Sign in to continue.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                invalid_api_key:
+                  summary: invalid api key
+                  description: Synthetic error example. Use an active key for the intended environment.
+                  value:
+                    error:
+                      code: invalid_api_key
+                      message: The API key is invalid, expired, or revoked.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '403':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**permission_denied** — Ask an organization owner to grant the required role or API-key scope.
+
+
+            **insufficient_scope** — Use a key with the scope stated in this operation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                permission_denied:
+                  summary: permission denied
+                  description: Synthetic error example. Ask an organization owner to grant the required role or API-key scope.
+                  value:
+                    error:
+                      code: permission_denied
+                      message: Your role does not allow this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                insufficient_scope:
+                  summary: insufficient scope
+                  description: Synthetic error example. Use a key with the scope stated in this operation.
+                  value:
+                    error:
+                      code: insufficient_scope
+                      message: The API key does not grant this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '405':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Allow:
+              schema:
+                type: string
+              description: Comma-separated supported HTTP methods.
+          description: '**method_not_allowed** — Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                method_not_allowed:
+                  summary: method not allowed
+                  description: Synthetic error example. Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.
+                  value:
+                    error:
+                      code: method_not_allowed
+                      message: This method is not supported for this endpoint.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '413':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**response_too_large** — Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                response_too_large:
+                  summary: response too large
+                  description: Synthetic error example. Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.
+                  value:
+                    error:
+                      code: response_too_large
+                      message: This response exceeds the size limit. Request a smaller page or a segmented export.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '429':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**rate_limited** — Wait for the request window to reset and retry with backoff.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                rate_limited:
+                  summary: rate limited
+                  description: Synthetic error example. Wait for the request window to reset and retry with backoff.
+                  value:
+                    error:
+                      code: rate_limited
+                      message: The per-minute request limit has been reached.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '500':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**internal_error** — Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internal_error:
+                  summary: internal error
+                  description: Synthetic error example. Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.
+                  value:
+                    error:
+                      code: internal_error
+                      message: The request could not be completed.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '503':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**temporarily_unavailable** — Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                temporarily_unavailable:
+                  summary: temporarily unavailable
+                  description: Synthetic error example. Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.
+                  value:
+                    error:
+                      code: temporarily_unavailable
+                      message: The service is temporarily unavailable. Retry shortly.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+    post:
+      operationId: post__cases
+      summary: Open a review case for an existing retained screening
+      tags:
+      - Review evidence
+      description: 'Required API key scope: cases:write.
+
+
+        Creates an open case for standard-retention evidence when a case was not already created automatically. Send decision=open; completed decisions require the human investigation workflow and return investigation_review_required. No Idempotency-Key contract applies to this endpoint. Before retrying an uncertain response, query GET /cases?screeningId=...; duplicate creation returns case_exists with error.details.caseId.'
+      security:
+      - bearerAuth: []
+      parameters: []
+      requestBody:
+        required: true
+        description: 'JSON request body. Send Content-Type: application/json with UTF-8 encoding; fields marked required must be present. Omit optional fields unless needed. Null is accepted only where explicitly shown. Unknown properties are rejected for validated request objects. Duplicate keys and nesting beyond 32 levels are rejected. Maximum body size: 1,048,576 bytes (1 MiB).'
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaseRequest'
+            example:
+              screeningId: 01234567-89ab-4cde-8f01-23456789abcd
+              decision: open
+              notes: Synthetic screening requires review.
+      responses:
+        '201':
+          headers:
+            X-Request-Id:
+              description: Server-generated request correlation identifier.
+              schema:
+                type: string
+                format: uuid
+          description: Successful response. JSON object with the required data key. All properties marked required are present, including keys whose value may be null. Unmarked properties can be omitted; clients should tolerate additional response properties.
+          content:
+            application/json:
+              examples:
+                success:
+                  summary: Synthetic success example
+                  description: Synthetic contract example, validated against the response schema. Invented data; no live customer, provider request, payment, message or source activation.
+                  value:
+                    data:
+                      id: 01234567-89ab-4cde-8f01-23456789abcd
+                      screeningId: 01234567-89ab-4cde-8f01-23456789abcd
+                      decision: open
+                      notes: Synthetic case awaiting identity review.
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CaseCreated'
+        '400':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**invalid_request** — Correct the request fields, resource identifiers, JSON body or query parameters before retrying.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_request:
+                  summary: invalid request
+                  description: Synthetic error example. Correct the request fields, resource identifiers, JSON body or query parameters before retrying.
+                  value:
+                    error:
+                      code: invalid_request
+                      message: The request is invalid.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '401':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            WWW-Authenticate:
+              schema:
+                type: string
+              description: Bearer authentication challenge.
+          description: '**authentication_required** — Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.
+
+
+            **invalid_api_key** — Use an active key for the intended environment.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                authentication_required:
+                  summary: authentication required
+                  description: 'Synthetic error example. Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.'
+                  value:
+                    error:
+                      code: authentication_required
+                      message: Sign in to continue.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                invalid_api_key:
+                  summary: invalid api key
+                  description: Synthetic error example. Use an active key for the intended environment.
+                  value:
+                    error:
+                      code: invalid_api_key
+                      message: The API key is invalid, expired, or revoked.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '403':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**permission_denied** — Ask an organization owner to grant the required role or API-key scope.
+
+
+            **insufficient_scope** — Use a key with the scope stated in this operation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                permission_denied:
+                  summary: permission denied
+                  description: Synthetic error example. Ask an organization owner to grant the required role or API-key scope.
+                  value:
+                    error:
+                      code: permission_denied
+                      message: Your role does not allow this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                insufficient_scope:
+                  summary: insufficient scope
+                  description: Synthetic error example. Use a key with the scope stated in this operation.
+                  value:
+                    error:
+                      code: insufficient_scope
+                      message: The API key does not grant this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '404':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**not_found** — Check the identifier and selected environment. The resource must belong to your organization and remain available.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                not_found:
+                  summary: not found
+                  description: Synthetic error example. Check the identifier and selected environment. The resource must belong to your organization and remain available.
+                  value:
+                    error:
+                      code: not_found
+                      message: Screening not found.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '405':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Allow:
+              schema:
+                type: string
+              description: Comma-separated supported HTTP methods.
+          description: '**method_not_allowed** — Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                method_not_allowed:
+                  summary: method not allowed
+                  description: Synthetic error example. Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.
+                  value:
+                    error:
+                      code: method_not_allowed
+                      message: This method is not supported for this endpoint.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '408':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**invalid_request** — Reconnect and retry using the same idempotency key and identical input where supported.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_request:
+                  summary: invalid request
+                  description: Synthetic error example. Reconnect and retry using the same idempotency key and identical input where supported.
+                  value:
+                    error:
+                      code: invalid_request
+                      message: The request body was not received within 10 seconds.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '409':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**investigation_review_required** — Use the investigation match-review, submit and approval endpoints before recording a conclusion.
+
+
+            **case_exists** — Open the existing case and append your review there.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                investigation_review_required:
+                  summary: investigation review required
+                  description: Synthetic error example. Use the investigation match-review, submit and approval endpoints before recording a conclusion.
+                  value:
+                    error:
+                      code: investigation_review_required
+                      message: Use the investigation workspace to review and approve every current match.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                case_exists:
+                  summary: case exists
+                  description: Synthetic error example. Open the existing case and append your review there.
+                  value:
+                    error:
+                      code: case_exists
+                      message: A review case already exists for this screening. Open that case to append a decision.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '410':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**result_expired** — Run a new screening and review its retained evidence. Expired evidence is not reconstructed.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                result_expired:
+                  summary: result expired
+                  description: Synthetic error example. Run a new screening and review its retained evidence. Expired evidence is not reconstructed.
+                  value:
+                    error:
+                      code: result_expired
+                      message: The evidence has expired. Run a new screening before reviewing it.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '413':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**response_too_large** — Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.
+
+
+            **invalid_request** — Reduce the JSON request size to the documented limit.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                response_too_large:
+                  summary: response too large
+                  description: Synthetic error example. Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.
+                  value:
+                    error:
+                      code: response_too_large
+                      message: This response exceeds the size limit. Request a smaller page or a segmented export.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                invalid_request:
+                  summary: invalid request
+                  description: Synthetic error example. Reduce the JSON request size to the documented limit.
+                  value:
+                    error:
+                      code: invalid_request
+                      message: REQUEST_TOO_LARGE
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '415':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**invalid_request** — Use Content-Type: application/json and an uncompressed UTF-8 body.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_request:
+                  summary: invalid request
+                  description: 'Synthetic error example. Use Content-Type: application/json and an uncompressed UTF-8 body.'
+                  value:
+                    error:
+                      code: invalid_request
+                      message: Send application/json with UTF-8 encoding.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '422':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**retained_screening_required** — Create a standard-retention screening before opening a case.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                retained_screening_required:
+                  summary: retained screening required
+                  description: Synthetic error example. Create a standard-retention screening before opening a case.
+                  value:
+                    error:
+                      code: retained_screening_required
+                      message: Case review requires a standard-retention screening.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '429':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**rate_limited** — Wait for the request window to reset and retry with backoff.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                rate_limited:
+                  summary: rate limited
+                  description: Synthetic error example. Wait for the request window to reset and retry with backoff.
+                  value:
+                    error:
+                      code: rate_limited
+                      message: The per-minute request limit has been reached.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '500':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**internal_error** — Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internal_error:
+                  summary: internal error
+                  description: Synthetic error example. Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.
+                  value:
+                    error:
+                      code: internal_error
+                      message: The request could not be completed.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '503':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**temporarily_unavailable** — Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                temporarily_unavailable:
+                  summary: temporarily unavailable
+                  description: Synthetic error example. Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.
+                  value:
+                    error:
+                      code: temporarily_unavailable
+                      message: The service is temporarily unavailable. Retry shortly.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+  /cases/{id}:
+    get:
+      operationId: get__cases_id_
+      summary: Read a case and append-only decisions
+      tags:
+      - Review evidence
+      description: 'Required API key scope: results:read.
+
+
+        Decision history is ordered chronologically and bounded to limit (default 25, maximum 100). Continue using nextDecisionCursor as cursor. The complete retained case archive is available separately.'
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Opaque resource identifier owned by the authenticated organization.
+      - in: query
+        name: limit
+        description: Maximum number of items to return. A response may contain fewer items; use its next cursor to decide whether another page exists.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+      - in: query
+        name: cursor
+        description: Pass nextDecisionCursor from the previous page; omit for the first page. Continue until the response cursor is null. Keep the same filters between pages.
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          headers:
+            X-Request-Id:
+              description: Server-generated request correlation identifier.
+              schema:
+                type: string
+                format: uuid
+          description: Successful response. JSON object with the required data key. All properties marked required are present, including keys whose value may be null. Unmarked properties can be omitted; clients should tolerate additional response properties.
+          content:
+            application/json:
+              examples:
+                recorded_detail:
+                  summary: A synthetic case with review history
+                  description: Recorded from the real application handler against an isolated synthetic database. IDs, times and nonfunctional temporary secrets are normalized. No customer data or live provider request.
+                  value:
+                    data:
+                      id: 00000000-0000-4000-8000-000000000001
+                      environment: sandbox
+                      screening_id: 00000000-0000-4000-8000-000000000002
+                      latest_screening_id: null
+                      decision: open
+                      review_state: open
+                      business_disposition: pending
+                      counterparty_id: 00000000-0000-4000-8000-000000000003
+                      created_at: '2026-09-17T12:00:00.000Z'
+                      updated_at: '2026-09-17T12:00:00.000Z'
+                      monitor_id: null
+                      review_started_at: '2026-09-17T12:00:00.000Z'
+                      revision: 1
+                      assignee_id: null
+                      priority: normal
+                      due_at: null
+                      escalated_at: null
+                      requires_second_review: false
+                      submitted_by: null
+                      approved_by: null
+                      submitted_screening_id: null
+                      superseded_by_screening_id: null
+                      superseded_by_case_id: null
+                      retention_policy: calendar_years
+                      retention_years: 10
+                      retention_days: null
+                      closed_at: null
+                      retention_expires_at: null
+                      retention_trigger: business_event
+                      retention_event_at: null
+                      retention_event_actor: null
+                      retention_event_reason: null
+                      subjectName: Alex Morgan
+                      entityType: person
+                      origin: manual
+                      status: potential_match
+                      matchCount: 1
+                      evidenceAvailable: true
+                      retention: standard
+                      expiresAt: null
+                      decisions:
+                      - id: 00000000-0000-4000-8000-000000000004
+                        actor_id: system:screening
+                        decision: open
+                        business_disposition: pending
+                        created_at: '2026-09-17T12:00:00.000Z'
+                        appliedControls:
+                          restrictedRoles:
+                            approval: []
+                            production: []
+                          screeningPolicy:
+                            id: 00000000-0000-4000-8000-000000000005
+                            review:
+                              approverRoles:
+                              - owner
+                              - admin
+                              - analyst
+                              secondReviewFor: []
+                              requireSecondReview: false
+                            version: 1
+                          governanceRevision: 1
+                          organizationApproval:
+                            approverRoles:
+                            - owner
+                            - admin
+                            - analyst
+                            secondReviewFor: []
+                            requireSecondReview: false
+                        notes: Potential matches require analyst review.
+                        actor_email: null
+                        screening_id: 00000000-0000-4000-8000-000000000002
+                      nextDecisionCursor: null
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CaseDetail'
+        '400':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**invalid_request** — Correct the request fields, resource identifiers, JSON body or query parameters before retrying.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_request:
+                  summary: invalid request
+                  description: Synthetic error example. Correct the request fields, resource identifiers, JSON body or query parameters before retrying.
+                  value:
+                    error:
+                      code: invalid_request
+                      message: The request is invalid.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '401':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            WWW-Authenticate:
+              schema:
+                type: string
+              description: Bearer authentication challenge.
+          description: '**authentication_required** — Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.
+
+
+            **invalid_api_key** — Use an active key for the intended environment.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                authentication_required:
+                  summary: authentication required
+                  description: 'Synthetic error example. Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.'
+                  value:
+                    error:
+                      code: authentication_required
+                      message: Sign in to continue.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                invalid_api_key:
+                  summary: invalid api key
+                  description: Synthetic error example. Use an active key for the intended environment.
+                  value:
+                    error:
+                      code: invalid_api_key
+                      message: The API key is invalid, expired, or revoked.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '403':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**permission_denied** — Ask an organization owner to grant the required role or API-key scope.
+
+
+            **insufficient_scope** — Use a key with the scope stated in this operation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                permission_denied:
+                  summary: permission denied
+                  description: Synthetic error example. Ask an organization owner to grant the required role or API-key scope.
+                  value:
+                    error:
+                      code: permission_denied
+                      message: Your role does not allow this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                insufficient_scope:
+                  summary: insufficient scope
+                  description: Synthetic error example. Use a key with the scope stated in this operation.
+                  value:
+                    error:
+                      code: insufficient_scope
+                      message: The API key does not grant this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '404':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**not_found** — Check the identifier and selected environment. The resource must belong to your organization and remain available.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                not_found:
+                  summary: not found
+                  description: Synthetic error example. Check the identifier and selected environment. The resource must belong to your organization and remain available.
+                  value:
+                    error:
+                      code: not_found
+                      message: Case not found.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '405':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Allow:
+              schema:
+                type: string
+              description: Comma-separated supported HTTP methods.
+          description: '**method_not_allowed** — Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                method_not_allowed:
+                  summary: method not allowed
+                  description: Synthetic error example. Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.
+                  value:
+                    error:
+                      code: method_not_allowed
+                      message: This method is not supported for this endpoint.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '413':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**response_too_large** — Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                response_too_large:
+                  summary: response too large
+                  description: Synthetic error example. Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.
+                  value:
+                    error:
+                      code: response_too_large
+                      message: This response exceeds the size limit. Request a smaller page or a segmented export.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '429':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**rate_limited** — Wait for the request window to reset and retry with backoff.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                rate_limited:
+                  summary: rate limited
+                  description: Synthetic error example. Wait for the request window to reset and retry with backoff.
+                  value:
+                    error:
+                      code: rate_limited
+                      message: The per-minute request limit has been reached.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '500':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**internal_error** — Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internal_error:
+                  summary: internal error
+                  description: Synthetic error example. Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.
+                  value:
+                    error:
+                      code: internal_error
+                      message: The request could not be completed.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '503':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**temporarily_unavailable** — Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                temporarily_unavailable:
+                  summary: temporarily unavailable
+                  description: Synthetic error example. Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.
+                  value:
+                    error:
+                      code: temporarily_unavailable
+                      message: The service is temporarily unavailable. Retry shortly.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+  /investigations/{id}:
+    get:
+      operationId: get__investigations_id_
+      summary: Read match decisions, assignments, retained notes and attachment metadata
+      tags:
+      - Review evidence
+      description: 'Required API key scope: results:read.'
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Opaque resource identifier owned by the authenticated organization.
+      responses:
+        '200':
+          headers:
+            X-Request-Id:
+              description: Server-generated request correlation identifier.
+              schema:
+                type: string
+                format: uuid
+          description: Successful response. JSON object with the required data key. All properties marked required are present, including keys whose value may be null. Unmarked properties can be omitted; clients should tolerate additional response properties.
+          content:
+            application/json:
+              examples:
+                recorded_open:
+                  summary: An open synthetic investigation
+                  description: Recorded from the real application handler against an isolated synthetic database. IDs, times and nonfunctional temporary secrets are normalized. No customer data or live provider request.
+                  value:
+                    data:
+                      id: 00000000-0000-4000-8000-000000000001
+                      screeningId: 00000000-0000-4000-8000-000000000002
+                      counterpartyId: 00000000-0000-4000-8000-000000000003
+                      decision: open
+                      revision: 1
+                      assigneeId: null
+                      priority: normal
+                      dueAt: null
+                      escalatedAt: null
+                      requiresSecondReview: false
+                      reviewState: open
+                      businessDisposition: pending
+                      reviewStartedAt: '2026-09-17T12:00:00.000Z'
+                      supersededByScreeningId: null
+                      supersededByCaseId: null
+                      approvalRequiredByPolicy: false
+                      approvalRequiredForActions: []
+                      approverRoles:
+                      - owner
+                      - admin
+                      - analyst
+                      reviewConcern: null
+                      policyContext:
+                        id: 00000000-0000-4000-8000-000000000004
+                        version: 1
+                        name: Synthetic onboarding policy
+                        purpose: Document vendor onboarding checks
+                        exclusions: []
+                      decisionHistory:
+                      - id: 00000000-0000-4000-8000-000000000005
+                        decision: open
+                        businessDisposition: pending
+                        rationale: Potential matches require analyst review.
+                        actorId: system:screening
+                        actorLabel: null
+                        createdAt: '2026-09-17T12:00:00.000Z'
+                        appliedControls:
+                          restrictedRoles:
+                            approval: []
+                            production: []
+                          screeningPolicy:
+                            id: 00000000-0000-4000-8000-000000000004
+                            review:
+                              approverRoles:
+                              - owner
+                              - admin
+                              - analyst
+                              secondReviewFor: []
+                              requireSecondReview: false
+                            version: 1
+                          governanceRevision: 1
+                          organizationApproval:
+                            approverRoles:
+                            - owner
+                            - admin
+                            - analyst
+                            secondReviewFor: []
+                            requireSecondReview: false
+                        screeningId: 00000000-0000-4000-8000-000000000002
+                      decisionHistoryTruncated: false
+                      checks:
+                      - label: Ownership review
+                        status: outstanding
+                        evidenceReference: ''
+                        rationale: ''
+                        actorId: null
+                        updatedAt: null
+                      checkHistory: []
+                      reuseChallenges: []
+                      submittedBy: null
+                      approvedBy: null
+                      matches:
+                      - id: 00000000-0000-4000-8000-000000000006
+                        screeningId: 00000000-0000-4000-8000-000000000002
+                        sourceId: sandbox-synthetic
+                        recordId: sandbox:person-001
+                        identityDecision: unresolved
+                        businessDecision: pending
+                        rationale: ''
+                        reusableUntil: null
+                        reusedRuleId: null
+                        actorId: system:screening
+                        updatedAt: '2026-09-17T12:00:00.000Z'
+                      subject:
+                        name: Alex Morgan
+                        entityType: person
+                        identifiers: []
+                      counterpartySubject:
+                        name: Alex Morgan
+                        entityType: person
+                        identifiers: []
+                      counterpartyRevision: 2
+                      evidence: []
+                      corrections: []
+                      originCorrection: null
+                      reviewHistory: []
+                      comments: []
+                      attachments: []
+                      assignees:
+                      - id: docs-synthetic-reviewer
+                        email: reviewer@example.test
+                        role: owner
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Investigation'
+        '400':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**invalid_request** — Correct the request fields, resource identifiers, JSON body or query parameters before retrying.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_request:
+                  summary: invalid request
+                  description: Synthetic error example. Correct the request fields, resource identifiers, JSON body or query parameters before retrying.
+                  value:
+                    error:
+                      code: invalid_request
+                      message: The request is invalid.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '401':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            WWW-Authenticate:
+              schema:
+                type: string
+              description: Bearer authentication challenge.
+          description: '**authentication_required** — Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.
+
+
+            **invalid_api_key** — Use an active key for the intended environment.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                authentication_required:
+                  summary: authentication required
+                  description: 'Synthetic error example. Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.'
+                  value:
+                    error:
+                      code: authentication_required
+                      message: Sign in to continue.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                invalid_api_key:
+                  summary: invalid api key
+                  description: Synthetic error example. Use an active key for the intended environment.
+                  value:
+                    error:
+                      code: invalid_api_key
+                      message: The API key is invalid, expired, or revoked.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '403':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**permission_denied** — Ask an organization owner to grant the required role or API-key scope.
+
+
+            **insufficient_scope** — Use a key with the scope stated in this operation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                permission_denied:
+                  summary: permission denied
+                  description: Synthetic error example. Ask an organization owner to grant the required role or API-key scope.
+                  value:
+                    error:
+                      code: permission_denied
+                      message: Your role does not allow this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                insufficient_scope:
+                  summary: insufficient scope
+                  description: Synthetic error example. Use a key with the scope stated in this operation.
+                  value:
+                    error:
+                      code: insufficient_scope
+                      message: The API key does not grant this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '404':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**not_found** — Check the identifier and selected environment. The resource must belong to your organization and remain available.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                not_found:
+                  summary: not found
+                  description: Synthetic error example. Check the identifier and selected environment. The resource must belong to your organization and remain available.
+                  value:
+                    error:
+                      code: not_found
+                      message: Investigation not found.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '405':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Allow:
+              schema:
+                type: string
+              description: Comma-separated supported HTTP methods.
+          description: '**method_not_allowed** — Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                method_not_allowed:
+                  summary: method not allowed
+                  description: Synthetic error example. Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.
+                  value:
+                    error:
+                      code: method_not_allowed
+                      message: This method is not supported for this endpoint.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '413':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**response_too_large** — Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.
+
+
+            **investigation_too_large** — Use the complete segmented case archive for retained evidence.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                response_too_large:
+                  summary: response too large
+                  description: Synthetic error example. Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.
+                  value:
+                    error:
+                      code: response_too_large
+                      message: This response exceeds the size limit. Request a smaller page or a segmented export.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                investigation_too_large:
+                  summary: investigation too large
+                  description: Synthetic error example. Use the complete segmented case archive for retained evidence.
+                  value:
+                    error:
+                      code: investigation_too_large
+                      message: This investigation exceeds the bounded response size.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '429':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**rate_limited** — Wait for the request window to reset and retry with backoff.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                rate_limited:
+                  summary: rate limited
+                  description: Synthetic error example. Wait for the request window to reset and retry with backoff.
+                  value:
+                    error:
+                      code: rate_limited
+                      message: The per-minute request limit has been reached.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '500':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**internal_error** — Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internal_error:
+                  summary: internal error
+                  description: Synthetic error example. Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.
+                  value:
+                    error:
+                      code: internal_error
+                      message: The request could not be completed.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '503':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**temporarily_unavailable** — Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                temporarily_unavailable:
+                  summary: temporarily unavailable
+                  description: Synthetic error example. Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.
+                  value:
+                    error:
+                      code: temporarily_unavailable
+                      message: The service is temporarily unavailable. Retry shortly.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+  /investigations/{id}/attachments/{attachmentId}:
+    get:
+      operationId: get__investigations_id_attachments_attachmentId_
+      summary: Download a retained text attachment
+      tags:
+      - Review evidence
+      description: 'Required API key scope: results:read.'
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Opaque resource identifier owned by the authenticated organization.
+      - in: path
+        name: attachmentId
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Opaque resource identifier owned by the authenticated organization.
+      responses:
+        '200':
+          headers:
+            X-Request-Id:
+              description: Server-generated request correlation identifier.
+              schema:
+                type: string
+                format: uuid
+          description: Successful response. The response is the documented raw JSON or file content, without a data envelope. Check Content-Type before decoding.
+          content:
+            text/plain:
+              examples:
+                success:
+                  summary: Synthetic success example
+                  description: Synthetic contract example, validated against the response schema. Invented data; no live customer, provider request, payment, message or source activation.
+                  value: 'Synthetic investigation note. Confirm the supplied identity facts before recording a decision.
+
+                    '
+              schema:
+                type: string
+        '400':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**invalid_request** — Correct the request fields, resource identifiers, JSON body or query parameters before retrying.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_request:
+                  summary: invalid request
+                  description: Synthetic error example. Correct the request fields, resource identifiers, JSON body or query parameters before retrying.
+                  value:
+                    error:
+                      code: invalid_request
+                      message: The request is invalid.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '401':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            WWW-Authenticate:
+              schema:
+                type: string
+              description: Bearer authentication challenge.
+          description: '**authentication_required** — Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.
+
+
+            **invalid_api_key** — Use an active key for the intended environment.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                authentication_required:
+                  summary: authentication required
+                  description: 'Synthetic error example. Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.'
+                  value:
+                    error:
+                      code: authentication_required
+                      message: Sign in to continue.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                invalid_api_key:
+                  summary: invalid api key
+                  description: Synthetic error example. Use an active key for the intended environment.
+                  value:
+                    error:
+                      code: invalid_api_key
+                      message: The API key is invalid, expired, or revoked.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '403':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**permission_denied** — Ask an organization owner to grant the required role or API-key scope.
+
+
+            **insufficient_scope** — Use a key with the scope stated in this operation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                permission_denied:
+                  summary: permission denied
+                  description: Synthetic error example. Ask an organization owner to grant the required role or API-key scope.
+                  value:
+                    error:
+                      code: permission_denied
+                      message: Your role does not allow this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                insufficient_scope:
+                  summary: insufficient scope
+                  description: Synthetic error example. Use a key with the scope stated in this operation.
+                  value:
+                    error:
+                      code: insufficient_scope
+                      message: The API key does not grant this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '404':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**not_found** — Check the identifier and selected environment. The resource must belong to your organization and remain available.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                not_found:
+                  summary: not found
+                  description: Synthetic error example. Check the identifier and selected environment. The resource must belong to your organization and remain available.
+                  value:
+                    error:
+                      code: not_found
+                      message: Investigation not found.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '405':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Allow:
+              schema:
+                type: string
+              description: Comma-separated supported HTTP methods.
+          description: '**method_not_allowed** — Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                method_not_allowed:
+                  summary: method not allowed
+                  description: Synthetic error example. Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.
+                  value:
+                    error:
+                      code: method_not_allowed
+                      message: This method is not supported for this endpoint.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '413':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**response_too_large** — Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.
+
+
+            **investigation_too_large** — Use the complete segmented case archive for retained evidence.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                response_too_large:
+                  summary: response too large
+                  description: Synthetic error example. Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.
+                  value:
+                    error:
+                      code: response_too_large
+                      message: This response exceeds the size limit. Request a smaller page or a segmented export.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                investigation_too_large:
+                  summary: investigation too large
+                  description: Synthetic error example. Use the complete segmented case archive for retained evidence.
+                  value:
+                    error:
+                      code: investigation_too_large
+                      message: This investigation exceeds the bounded response size.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '429':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**rate_limited** — Wait for the request window to reset and retry with backoff.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                rate_limited:
+                  summary: rate limited
+                  description: Synthetic error example. Wait for the request window to reset and retry with backoff.
+                  value:
+                    error:
+                      code: rate_limited
+                      message: The per-minute request limit has been reached.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '500':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**internal_error** — Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internal_error:
+                  summary: internal error
+                  description: Synthetic error example. Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.
+                  value:
+                    error:
+                      code: internal_error
+                      message: The request could not be completed.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '503':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**temporarily_unavailable** — Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                temporarily_unavailable:
+                  summary: temporarily unavailable
+                  description: Synthetic error example. Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.
+                  value:
+                    error:
+                      code: temporarily_unavailable
+                      message: The service is temporarily unavailable. Retry shortly.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+  /audit:
+    get:
+      operationId: get__audit
+      summary: List retained human review decisions
+      tags:
+      - Review evidence
+      description: 'Required API key scope: results:read.
+
+
+        Read append-only human decision history, newest first. Filter by q or review and follow nextCursor. Notes are replaced with [removed under retention policy] after expiry; evidenceAvailable describes the linked evidence and does not reverse an earlier human decision.'
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: query
+        name: limit
+        description: Maximum number of items to return. A response may contain fewer items; use its next cursor to decide whether another page exists.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+      - in: query
+        name: cursor
+        description: Pass nextCursor from the previous page; omit for the first page. Continue until the response cursor is null. Keep the same filters between pages.
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: q
+        schema:
+          type: string
+          maxLength: 200
+        description: Search retained names or resource IDs.
+      - in: query
+        name: review
+        schema:
+          type: string
+          enum:
+          - open
+          - confirmed
+          - dismissed
+          - unreviewed
+        description: Filter linked human decision state. unreviewed selects results without a case; it produces no items in case or audit lists. On GET /results requires summary=true.
+      responses:
+        '200':
+          headers:
+            X-Request-Id:
+              description: Server-generated request correlation identifier.
+              schema:
+                type: string
+                format: uuid
+          description: Successful response. JSON object with the required data key. All properties marked required are present, including keys whose value may be null. Unmarked properties can be omitted; clients should tolerate additional response properties.
+          content:
+            application/json:
+              examples:
+                success:
+                  summary: Synthetic success example
+                  description: Synthetic contract example, validated against the response schema. Invented data; no live customer, provider request, payment, message or source activation.
+                  value:
+                    data:
+                      items:
+                      - id: 01234567-89ab-4cde-8f01-23456789abce
+                        caseId: 01234567-89ab-4cde-8f01-23456789abcd
+                        actorId: user_example
+                        actorEmail: reviewer@example.test
+                        businessDisposition: pending
+                        decision: open
+                        appliedControls: null
+                        notes: Synthetic case awaiting identity review.
+                        createdAt: '2026-09-17T12:00:00.000Z'
+                        screeningId: 01234567-89ab-4cde-8f01-23456789abcd
+                        subjectName: Alex Morgan
+                        evidenceAvailable: true
+                      nextCursor: null
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AuditPage'
+        '400':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**invalid_request** — Correct the request fields, resource identifiers, JSON body or query parameters before retrying.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_request:
+                  summary: invalid request
+                  description: Synthetic error example. Correct the request fields, resource identifiers, JSON body or query parameters before retrying.
+                  value:
+                    error:
+                      code: invalid_request
+                      message: The request is invalid.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '401':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            WWW-Authenticate:
+              schema:
+                type: string
+              description: Bearer authentication challenge.
+          description: '**authentication_required** — Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.
+
+
+            **invalid_api_key** — Use an active key for the intended environment.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                authentication_required:
+                  summary: authentication required
+                  description: 'Synthetic error example. Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.'
+                  value:
+                    error:
+                      code: authentication_required
+                      message: Sign in to continue.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                invalid_api_key:
+                  summary: invalid api key
+                  description: Synthetic error example. Use an active key for the intended environment.
+                  value:
+                    error:
+                      code: invalid_api_key
+                      message: The API key is invalid, expired, or revoked.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '403':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**permission_denied** — Ask an organization owner to grant the required role or API-key scope.
+
+
+            **insufficient_scope** — Use a key with the scope stated in this operation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                permission_denied:
+                  summary: permission denied
+                  description: Synthetic error example. Ask an organization owner to grant the required role or API-key scope.
+                  value:
+                    error:
+                      code: permission_denied
+                      message: Your role does not allow this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                insufficient_scope:
+                  summary: insufficient scope
+                  description: Synthetic error example. Use a key with the scope stated in this operation.
+                  value:
+                    error:
+                      code: insufficient_scope
+                      message: The API key does not grant this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '405':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Allow:
+              schema:
+                type: string
+              description: Comma-separated supported HTTP methods.
+          description: '**method_not_allowed** — Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                method_not_allowed:
+                  summary: method not allowed
+                  description: Synthetic error example. Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.
+                  value:
+                    error:
+                      code: method_not_allowed
+                      message: This method is not supported for this endpoint.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '413':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**response_too_large** — Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                response_too_large:
+                  summary: response too large
+                  description: Synthetic error example. Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.
+                  value:
+                    error:
+                      code: response_too_large
+                      message: This response exceeds the size limit. Request a smaller page or a segmented export.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '429':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**rate_limited** — Wait for the request window to reset and retry with backoff.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                rate_limited:
+                  summary: rate limited
+                  description: Synthetic error example. Wait for the request window to reset and retry with backoff.
+                  value:
+                    error:
+                      code: rate_limited
+                      message: The per-minute request limit has been reached.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '500':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**internal_error** — Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internal_error:
+                  summary: internal error
+                  description: Synthetic error example. Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.
+                  value:
+                    error:
+                      code: internal_error
+                      message: The request could not be completed.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '503':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**temporarily_unavailable** — Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                temporarily_unavailable:
+                  summary: temporarily unavailable
+                  description: Synthetic error example. Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.
+                  value:
+                    error:
+                      code: temporarily_unavailable
+                      message: The service is temporarily unavailable. Retry shortly.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+components:
+  schemas:
+    Investigation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        screeningId:
+          type: string
+          format: uuid
+        counterpartyId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        decision:
+          type: string
+          enum:
+          - open
+          - confirmed
+          - dismissed
+        revision:
+          type: integer
+          minimum: 0
+        assigneeId:
+          anyOf:
+          - type: string
+          - type: 'null'
+        priority:
+          type: string
+          enum:
+          - low
+          - normal
+          - high
+          - urgent
+        dueAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        escalatedAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        requiresSecondReview:
+          type: boolean
+        reviewState:
+          type: string
+          enum:
+          - open
+          - pending_approval
+          - approved
+          - superseded
+        businessDisposition:
+          type: string
+          enum:
+          - pending
+          - allow
+          - restrict
+          - escalate
+        reviewStartedAt:
+          type: string
+          format: date-time
+        supersededByScreeningId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        supersededByCaseId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        approvalRequiredByPolicy:
+          type: boolean
+        approvalRequiredForActions:
+          type: array
+          items:
+            type: string
+        approverRoles:
+          type: array
+          items:
+            type: string
+        reviewConcern:
+          anyOf:
+          - type: string
+          - type: 'null'
+        policyContext:
+          anyOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              version:
+                type: integer
+                minimum: 0
+              name:
+                type: string
+              purpose:
+                type: string
+              exclusions:
+                type: array
+                items:
+                  type: string
+            required:
+            - id
+            - version
+            - name
+            - purpose
+            - exclusions
+          - type: 'null'
+        decisionHistory:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              screeningId:
+                anyOf:
+                - type: string
+                  format: uuid
+                - type: 'null'
+              decision:
+                type: string
+                enum:
+                - open
+                - confirmed
+                - dismissed
+              businessDisposition:
+                anyOf:
+                - type: string
+                  enum:
+                  - pending
+                  - allow
+                  - restrict
+                  - escalate
+                - type: 'null'
+              rationale:
+                anyOf:
+                - type: string
+                - type: 'null'
+              actorId:
+                type: string
+              actorLabel:
+                anyOf:
+                - type: string
+                - type: 'null'
+              createdAt:
+                type: string
+                format: date-time
+              appliedControls:
+                anyOf:
+                - $ref: '#/components/schemas/AppliedDecisionControls'
+                - type: 'null'
+            required:
+            - id
+            - screeningId
+            - decision
+            - businessDisposition
+            - rationale
+            - actorId
+            - actorLabel
+            - createdAt
+            - appliedControls
+        decisionHistoryTruncated:
+          type: boolean
+        checks:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              instructions:
+                type: string
+              evidenceExample:
+                type: string
+              reviewConcern:
+                type: string
+              status:
+                type: string
+                enum:
+                - outstanding
+                - completed_externally
+                - not_applicable
+              evidenceReference:
+                type: string
+              rationale:
+                type: string
+              actorId:
+                anyOf:
+                - type: string
+                - type: 'null'
+              updatedAt:
+                anyOf:
+                - type: string
+                  format: date-time
+                - type: 'null'
+            required:
+            - label
+            - status
+            - evidenceReference
+            - rationale
+            - actorId
+            - updatedAt
+        checkHistory:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              screeningId:
+                type: string
+                format: uuid
+              label:
+                type: string
+              status:
+                type: string
+                enum:
+                - outstanding
+                - completed_externally
+                - not_applicable
+              evidenceReference:
+                type: string
+              rationale:
+                type: string
+              actorId:
+                type: string
+              updatedAt:
+                type: string
+                format: date-time
+              expiresAt:
+                anyOf:
+                - type: string
+                  format: date-time
+                - type: 'null'
+            required:
+            - id
+            - screeningId
+            - label
+            - status
+            - evidenceReference
+            - rationale
+            - actorId
+            - updatedAt
+            - expiresAt
+        reuseChallenges:
+          type: array
+          items:
+            type: object
+            properties:
+              ruleId:
+                type: string
+              originCaseId:
+                type: string
+              challengedByCaseId:
+                type: string
+              actorId:
+                type: string
+              revokedAt:
+                type: string
+                format: date-time
+              affectedCaseIds:
+                type: array
+                items:
+                  type: string
+            required:
+            - ruleId
+            - originCaseId
+            - challengedByCaseId
+            - actorId
+            - revokedAt
+            - affectedCaseIds
+        submittedBy:
+          anyOf:
+          - type: string
+          - type: 'null'
+        approvedBy:
+          anyOf:
+          - type: string
+          - type: 'null'
+        matches:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              screeningId:
+                type: string
+                format: uuid
+              sourceId:
+                type: string
+              recordId:
+                type: string
+              identityDecision:
+                type: string
+                enum:
+                - unresolved
+                - same
+                - different
+              businessDecision:
+                type: string
+                enum:
+                - pending
+                - allow
+                - restrict
+                - escalate
+              rationale:
+                type: string
+              reusableUntil:
+                anyOf:
+                - type: string
+                  format: date-time
+                - type: 'null'
+              reusedRuleId:
+                anyOf:
+                - type: string
+                  format: uuid
+                - type: 'null'
+              actorId:
+                type: string
+              updatedAt:
+                type: string
+                format: date-time
+              reuse:
+                type: object
+                properties:
+                  caseId:
+                    type: string
+                    format: uuid
+                  screeningId:
+                    type: string
+                    format: uuid
+                  approvedBy:
+                    type: string
+                  expiresAt:
+                    type: string
+                    format: date-time
+                  revokedAt:
+                    anyOf:
+                    - type: string
+                      format: date-time
+                    - type: 'null'
+                required:
+                - caseId
+                - screeningId
+                - approvedBy
+                - expiresAt
+                - revokedAt
+            required:
+            - id
+            - screeningId
+            - sourceId
+            - recordId
+            - identityDecision
+            - businessDecision
+            - rationale
+            - reusableUntil
+            - reusedRuleId
+            - actorId
+            - updatedAt
+        subject:
+          anyOf:
+          - $ref: '#/components/schemas/Subject'
+          - type: 'null'
+        counterpartySubject:
+          anyOf:
+          - $ref: '#/components/schemas/Subject'
+          - type: 'null'
+        counterpartyRevision:
+          anyOf:
+          - type: integer
+            minimum: 0
+          - type: 'null'
+        originCorrection:
+          anyOf:
+          - type: object
+            properties:
+              caseId:
+                type: string
+                format: uuid
+              screeningId:
+                type: string
+                format: uuid
+            required:
+            - caseId
+            - screeningId
+          - type: 'null'
+        evidence:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              screeningId:
+                type: string
+                format: uuid
+              sourceId:
+                type: string
+              recordId:
+                type: string
+              field:
+                type: string
+              value:
+                type: string
+              sourceReference:
+                type: string
+              verification:
+                type: string
+                enum:
+                - unverified
+                - verified
+              comparison:
+                type: string
+                enum:
+                - agrees
+                - conflicts
+                - unknown
+              notes:
+                type: string
+              content:
+                type: string
+              actorId:
+                type: string
+              createdAt:
+                type: string
+                format: date-time
+              expiresAt:
+                anyOf:
+                - type: string
+                  format: date-time
+                - type: 'null'
+            required:
+            - id
+            - screeningId
+            - sourceId
+            - recordId
+            - field
+            - value
+            - sourceReference
+            - verification
+            - comparison
+            - notes
+            - content
+            - actorId
+            - createdAt
+            - expiresAt
+        corrections:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              screeningId:
+                type: string
+                format: uuid
+              resultScreeningId:
+                type: string
+                format: uuid
+              resultCaseId:
+                anyOf:
+                - type: string
+                  format: uuid
+                - type: 'null'
+              before:
+                $ref: '#/components/schemas/Subject'
+              after:
+                $ref: '#/components/schemas/Subject'
+              reason:
+                type: string
+              actorId:
+                type: string
+              createdAt:
+                type: string
+                format: date-time
+              expiresAt:
+                anyOf:
+                - type: string
+                  format: date-time
+                - type: 'null'
+            required:
+            - id
+            - screeningId
+            - resultScreeningId
+            - resultCaseId
+            - before
+            - after
+            - reason
+            - actorId
+            - createdAt
+            - expiresAt
+        reviewHistory:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              screeningId:
+                type: string
+                format: uuid
+              sourceId:
+                type: string
+              recordId:
+                type: string
+              review:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  screeningId:
+                    type: string
+                    format: uuid
+                  sourceId:
+                    type: string
+                  recordId:
+                    type: string
+                  identityDecision:
+                    type: string
+                  businessDecision:
+                    type: string
+                  rationale:
+                    type: string
+                  reusableUntil:
+                    anyOf:
+                    - type: string
+                      format: date-time
+                    - type: 'null'
+                  reusedRuleId:
+                    anyOf:
+                    - type: string
+                      format: uuid
+                    - type: 'null'
+                  actorId:
+                    type: string
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                - id
+                - screeningId
+                - sourceId
+                - recordId
+                - identityDecision
+                - businessDecision
+                - rationale
+                - reusableUntil
+                - reusedRuleId
+                - actorId
+                - updatedAt
+              replacedBy:
+                type: string
+              reason:
+                type: string
+                enum:
+                - decision_updated
+                - evidence_added
+                - subject_corrected
+                - rule_challenged
+              createdAt:
+                type: string
+                format: date-time
+              expiresAt:
+                anyOf:
+                - type: string
+                  format: date-time
+                - type: 'null'
+            required:
+            - id
+            - screeningId
+            - sourceId
+            - recordId
+            - review
+            - replacedBy
+            - reason
+            - createdAt
+            - expiresAt
+        comments:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              body:
+                type: string
+              actorId:
+                type: string
+              createdAt:
+                type: string
+                format: date-time
+            required:
+            - id
+            - body
+            - actorId
+            - createdAt
+        attachments:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              title:
+                type: string
+              sha256:
+                type: string
+              size:
+                type: integer
+                minimum: 0
+              actorId:
+                type: string
+              createdAt:
+                type: string
+                format: date-time
+              expiresAt:
+                anyOf:
+                - type: string
+                  format: date-time
+                - type: 'null'
+            required:
+            - id
+            - title
+            - sha256
+            - size
+            - actorId
+            - createdAt
+            - expiresAt
+        assignees:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              email:
+                type: string
+              role:
+                type: string
+            required:
+            - id
+            - email
+            - role
+      required:
+      - id
+      - screeningId
+      - counterpartyId
+      - decision
+      - revision
+      - assigneeId
+      - priority
+      - dueAt
+      - escalatedAt
+      - requiresSecondReview
+      - reviewState
+      - businessDisposition
+      - reviewStartedAt
+      - supersededByScreeningId
+      - supersededByCaseId
+      - approvalRequiredByPolicy
+      - approvalRequiredForActions
+      - approverRoles
+      - reviewConcern
+      - policyContext
+      - decisionHistory
+      - decisionHistoryTruncated
+      - checks
+      - checkHistory
+      - reuseChallenges
+      - submittedBy
+      - approvedBy
+      - matches
+      - subject
+      - counterpartySubject
+      - counterpartyRevision
+      - originCorrection
+      - evidence
+      - corrections
+      - reviewHistory
+      - comments
+      - attachments
+      - assignees
+    CaseRequest:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      type: object
+      properties:
+        decision:
+          type: string
+          enum:
+          - open
+          description: Must be open when creating a case. Completed decisions require the human investigation workflow and return investigation_review_required here.
+          const: open
+        notes:
+          type: string
+          minLength: 1
+          maxLength: 5000
+          description: Nonempty opening rationale, trimmed before validation. Retained under the case policy.
+        screeningId:
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          description: UUID of a retained standard screening in this organization and environment. An existing case returns case_exists; minimal or expired evidence cannot be used.
+        expectedUpdatedAt:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+          description: Legacy optional timestamp accepted and echoed by creation. It is not a concurrency guard for a new case; omit it.
+      required:
+      - decision
+      - notes
+      - screeningId
+      additionalProperties: false
+      description: Open a case for retained evidence. decision must be open; the API cannot complete the human investigation or independent approval workflow.
+    AuditPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              caseId:
+                type: string
+                format: uuid
+              actorId:
+                type: string
+              actorEmail:
+                anyOf:
+                - type: string
+                - type: 'null'
+              decision:
+                type: string
+                enum:
+                - open
+                - confirmed
+                - dismissed
+              businessDisposition:
+                type: string
+                enum:
+                - pending
+                - allow
+                - restrict
+                - escalate
+              appliedControls:
+                anyOf:
+                - $ref: '#/components/schemas/AppliedDecisionControls'
+                - type: 'null'
+              notes:
+                anyOf:
+                - type: string
+                - type: 'null'
+              createdAt:
+                type: string
+                format: date-time
+              screeningId:
+                anyOf:
+                - type: string
+                  format: uuid
+                - type: 'null'
+              subjectName:
+                anyOf:
+                - type: string
+                - type: 'null'
+              evidenceAvailable:
+                type: boolean
+            required:
+            - id
+            - caseId
+            - actorId
+            - actorEmail
+            - decision
+            - businessDisposition
+            - appliedControls
+            - notes
+            - createdAt
+            - screeningId
+            - subjectName
+            - evidenceAvailable
+        nextCursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+      required:
+      - items
+      - nextCursor
+    Subject:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 300
+          description: Name to compare with publisher records. Leading and trailing whitespace is removed; provide the fullest reliable name available.
+        entityType:
+          default: person
+          type: string
+          enum:
+          - person
+          - organization
+          - vessel
+          - aircraft
+          - other
+          description: Type of subject. Defaults to person when omitted. Every selected source must support this type.
+        identifiers:
+          default: []
+          maxItems: 20
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                minLength: 1
+                maxLength: 80
+                description: Identifier scheme, such as passport, national_id, registration, lei, imo or mmsi. Matching normalizes supported scheme aliases.
+              value:
+                type: string
+                minLength: 1
+                maxLength: 160
+                description: Identifier value. Send the original value; scheme-specific normalization is applied during matching.
+              issuer:
+                type: string
+                minLength: 1
+                maxLength: 100
+                description: Optional issuing authority or country. Omit when unknown; do not send null.
+            required:
+            - type
+            - value
+            additionalProperties: false
+          description: Typed identifiers used for exact matching, such as passport, national_id, registration, lei, imo or mmsi. Defaults to an empty array. Use the publisher’s identifier scheme; custom scheme names are accepted.
+        birthDate:
+          anyOf:
+          - type: string
+            pattern: ^(?!0000)\d{4}$
+          - type: string
+            pattern: ^(?!0000)\d{4}-(0[1-9]|1[0-2])$
+          - type: string
+            allOf:
+            - pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))$
+            - pattern: ^(?!0000)
+          description: 'Known date or partial date: YYYY, YYYY-MM or YYYY-MM-DD. Preserve known precision; do not invent a month or day. Year 0000 and invalid dates are rejected.'
+        country:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: Known country name or code used as supporting identity evidence. It is not a source-selection or geographic coverage filter.
+      required:
+      - name
+      additionalProperties: false
+    Error:
+      type: object
+      required:
+      - error
+      description: Failure envelope for every documented non-2xx API response. No data property is returned. Switch on error.code; messages may change.
+      properties:
+        error:
+          type: object
+          required:
+          - code
+          - message
+          - requestId
+          properties:
+            code:
+              type: string
+              description: Machine-readable failure code. See this operation’s status-specific examples for codes and recovery.
+            message:
+              type: string
+              description: Human-readable explanation. Do not parse this text to control application behavior.
+            requestId:
+              type: string
+              format: uuid
+              description: Server correlation ID, also returned in X-Request-Id. Include this ID in support requests.
+            details:
+              description: Optional JSON details for client and validation failures. Validation failures return an array of { path, message } issues; other 4xx codes may return a code-specific object. Server failures omit details. Never assume this key is present.
+              anyOf:
+              - type: array
+                maxItems: 50
+                items:
+                  type: object
+                  required:
+                  - path
+                  - message
+                  properties:
+                    path:
+                      type: string
+                      maxLength: 160
+                      description: Dot-separated invalid field path, including array indexes.
+                    message:
+                      type: string
+                      maxLength: 300
+                      description: Validation problem for this field.
+              - type: object
+                additionalProperties: true
+              - type:
+                - string
+                - number
+                - boolean
+                - 'null'
+            detailsTruncated:
+              type: boolean
+              description: True when only the first 50 validation issues are returned. Validation paths and messages are bounded.
+    CaseDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        environment:
+          type: string
+        screening_id:
+          type: string
+          format: uuid
+        monitor_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        decision:
+          type: string
+        business_disposition:
+          type: string
+        review_started_at:
+          type: string
+          format: date-time
+        superseded_by_screening_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        superseded_by_case_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        latest_screening_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        counterparty_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        assignee_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+        priority:
+          type: string
+        due_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        escalated_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        revision:
+          type: integer
+        requires_second_review:
+          type: boolean
+        review_state:
+          type: string
+        submitted_by:
+          anyOf:
+          - type: string
+          - type: 'null'
+        approved_by:
+          anyOf:
+          - type: string
+          - type: 'null'
+        submitted_screening_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        retention_policy:
+          type: string
+        retention_years:
+          anyOf:
+          - type: integer
+          - type: 'null'
+        retention_days:
+          anyOf:
+          - type: integer
+          - type: 'null'
+        closed_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        retention_expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        retention_trigger:
+          type: string
+        retention_event_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        retention_event_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+        retention_event_actor:
+          anyOf:
+          - type: string
+          - type: 'null'
+        subjectName:
+          anyOf:
+          - type: string
+          - type: 'null'
+        entityType:
+          anyOf:
+          - type: string
+          - type: 'null'
+        origin:
+          type: string
+        status:
+          anyOf:
+          - type: string
+            enum:
+            - potential_match
+            - no_match
+          - type: 'null'
+        matchCount:
+          type: integer
+          minimum: 0
+        evidenceAvailable:
+          type: boolean
+        retention:
+          type: string
+          enum:
+          - standard
+          - minimal
+        expiresAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        decisions:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              actor_id:
+                type: string
+              decision:
+                type: string
+                enum:
+                - open
+                - confirmed
+                - dismissed
+              business_disposition:
+                type: string
+                enum:
+                - pending
+                - allow
+                - restrict
+                - escalate
+              appliedControls:
+                anyOf:
+                - $ref: '#/components/schemas/AppliedDecisionControls'
+                - type: 'null'
+              notes:
+                anyOf:
+                - type: string
+                - type: 'null'
+              created_at:
+                type: string
+                format: date-time
+              actor_email:
+                anyOf:
+                - type: string
+                - type: 'null'
+              screening_id:
+                anyOf:
+                - type: string
+                  format: uuid
+                - type: 'null'
+            required:
+            - id
+            - actor_id
+            - decision
+            - business_disposition
+            - appliedControls
+            - notes
+            - created_at
+            - actor_email
+            - screening_id
+        nextDecisionCursor:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+      required:
+      - id
+      - environment
+      - screening_id
+      - monitor_id
+      - decision
+      - business_disposition
+      - review_started_at
+      - superseded_by_screening_id
+      - superseded_by_case_id
+      - created_at
+      - updated_at
+      - latest_screening_id
+      - counterparty_id
+      - assignee_id
+      - priority
+      - due_at
+      - escalated_at
+      - revision
+      - requires_second_review
+      - review_state
+      - submitted_by
+      - approved_by
+      - submitted_screening_id
+      - retention_policy
+      - retention_years
+      - retention_days
+      - closed_at
+      - retention_expires_at
+      - retention_trigger
+      - retention_event_at
+      - retention_event_reason
+      - retention_event_actor
+      - subjectName
+      - entityType
+      - origin
+      - status
+      - matchCount
+      - evidenceAvailable
+      - retention
+      - expiresAt
+      - decisions
+      - nextDecisionCursor
+    CaseCreated:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        screeningId:
+          type: string
+          format: uuid
+        decision:
+          const: open
+        notes:
+          type: string
+        expectedUpdatedAt:
+          type: string
+          format: date-time
+      required:
+      - id
+      - screeningId
+      - decision
+      - notes
+    AppliedDecisionControls:
+      type: object
+      properties:
+        governanceRevision:
+          type: integer
+          minimum: 1
+        organizationApproval:
+          $schema: https://json-schema.org/draft/2020-12/schema
+          type: object
+          properties:
+            requireSecondReview:
+              default: false
+              type: boolean
+            secondReviewFor:
+              default: []
+              maxItems: 4
+              type: array
+              items:
+                type: string
+                enum:
+                - same_identity
+                - allow
+                - restrict
+                - escalate
+            approverRoles:
+              default:
+              - owner
+              - admin
+              - analyst
+              minItems: 1
+              maxItems: 3
+              type: array
+              items:
+                type: string
+                enum:
+                - owner
+                - admin
+                - analyst
+          additionalProperties: false
+          required:
+          - requireSecondReview
+          - secondReviewFor
+          - approverRoles
+        restrictedRoles:
+          type: object
+          properties:
+            approval:
+              type: array
+              items:
+                type: string
+                enum:
+                - analyst
+                - developer
+                - viewer
+            production:
+              type: array
+              items:
+                type: string
+                enum:
+                - analyst
+                - developer
+                - viewer
+          required:
+          - approval
+          - production
+          additionalProperties: false
+        screeningPolicy:
+          anyOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              version:
+                type: integer
+                minimum: 1
+              review:
+                $schema: https://json-schema.org/draft/2020-12/schema
+                type: object
+                properties:
+                  requireSecondReview:
+                    default: false
+                    type: boolean
+                  secondReviewFor:
+                    default: []
+                    maxItems: 4
+                    type: array
+                    items:
+                      type: string
+                      enum:
+                      - same_identity
+                      - allow
+                      - restrict
+                      - escalate
+                  approverRoles:
+                    default:
+                    - owner
+                    - admin
+                    - analyst
+                    minItems: 1
+                    maxItems: 3
+                    type: array
+                    items:
+                      type: string
+                      enum:
+                      - owner
+                      - admin
+                      - analyst
+                additionalProperties: false
+                required:
+                - requireSecondReview
+                - secondReviewFor
+                - approverRoles
+            required:
+            - id
+            - version
+            - review
+            additionalProperties: false
+          - type: 'null'
+      required:
+      - governanceRevision
+      - organizationApproval
+      - restrictedRoles
+      - screeningPolicy
+      additionalProperties: false
+      description: Immutable decision-time approval configuration. A null appliedControls value on a decision means no historic snapshot is available; current settings are never substituted. Notification recipients and document hosts are excluded.
+    CaseSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        environment:
+          type: string
+        screening_id:
+          type: string
+          format: uuid
+        monitor_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        decision:
+          type: string
+        business_disposition:
+          type: string
+        review_started_at:
+          type: string
+          format: date-time
+        superseded_by_screening_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        superseded_by_case_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        latest_screening_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        counterparty_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        assignee_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+        priority:
+          type: string
+        due_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        escalated_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        revision:
+          type: integer
+        requires_second_review:
+          type: boolean
+        review_state:
+          type: string
+        submitted_by:
+          anyOf:
+          - type: string
+          - type: 'null'
+        approved_by:
+          anyOf:
+          - type: string
+          - type: 'null'
+        submitted_screening_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        retention_policy:
+          type: string
+        retention_years:
+          anyOf:
+          - type: integer
+          - type: 'null'
+        retention_days:
+          anyOf:
+          - type: integer
+          - type: 'null'
+        closed_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        retention_expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        retention_trigger:
+          type: string
+        retention_event_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        retention_event_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+        retention_event_actor:
+          anyOf:
+          - type: string
+          - type: 'null'
+        subjectName:
+          anyOf:
+          - type: string
+          - type: 'null'
+        entityType:
+          anyOf:
+          - type: string
+          - type: 'null'
+        origin:
+          type: string
+        status:
+          anyOf:
+          - type: string
+            enum:
+            - potential_match
+            - no_match
+          - type: 'null'
+        matchCount:
+          type: integer
+          minimum: 0
+        evidenceAvailable:
+          type: boolean
+        retention:
+          type: string
+          enum:
+          - standard
+          - minimal
+        expiresAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+      required:
+      - id
+      - environment
+      - screening_id
+      - monitor_id
+      - decision
+      - business_disposition
+      - review_started_at
+      - superseded_by_screening_id
+      - superseded_by_case_id
+      - created_at
+      - updated_at
+      - latest_screening_id
+      - counterparty_id
+      - assignee_id
+      - priority
+      - due_at
+      - escalated_at
+      - revision
+      - requires_second_review
+      - review_state
+      - submitted_by
+      - approved_by
+      - submitted_screening_id
+      - retention_policy
+      - retention_years
+      - retention_days
+      - closed_at
+      - retention_expires_at
+      - retention_trigger
+      - retention_event_at
+      - retention_event_reason
+      - retention_event_actor
+      - subjectName
+      - entityType
+      - origin
+      - status
+      - matchCount
+      - evidenceAvailable
+      - retention
+      - expiresAt
+      description: Case queue projection including current linked screening metadata, review ownership, supersession and retention state. Nullable keys remain present. status may be null after evidence expires; inspect evidenceAvailable.
+    CasePage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CaseSummary'
+        nextCursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+      required:
+      - items
+      - nextCursor
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: sk_test_... or sk_live_...
+x-docs-revision: 499779e00214c23622695c6d7114fb3656edf29161460d9f9e9d2ab65d0cf087

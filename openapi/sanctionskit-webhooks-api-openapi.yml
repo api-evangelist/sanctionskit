@@ -1,0 +1,1356 @@
+openapi: 3.2.0
+info:
+  title: SanctionsKit Webhooks API
+  version: 1.0.0
+  description: Explore success and error examples without an account or API key. Recorded examples use isolated synthetic application data; remaining examples are labeled contract fixtures. Potential-match screening is for review. No-match is limited to selected, qualified sources. Sandbox uses synthetic records and is never billed. Each successfully completed subject consumes one allowance unit, including monitoring rescreens. Failed rows and idempotent retries do not consume additional units.
+servers:
+- url: /api/v1
+  description: This site origin; deployment configuration and access rules apply
+tags:
+- name: Webhooks
+paths:
+  /webhooks:
+    get:
+      operationId: get__webhooks
+      summary: Read endpoints and recent delivery history
+      tags:
+      - Webhooks
+      description: 'Required API key scope: webhooks:write.'
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '200':
+          headers:
+            X-Request-Id:
+              description: Server-generated request correlation identifier.
+              schema:
+                type: string
+                format: uuid
+          description: Successful response. JSON object with the required data key. All properties marked required are present, including keys whose value may be null. Unmarked properties can be omitted; clients should tolerate additional response properties.
+          content:
+            application/json:
+              examples:
+                recorded_empty:
+                  summary: A synthetic workspace without webhook endpoints
+                  description: Recorded from the real application handler against an isolated synthetic database. IDs, times and nonfunctional temporary secrets are normalized. No customer data or live provider request.
+                  value:
+                    data:
+                      endpoints: []
+                      deliveries: []
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Webhooks'
+        '400':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**invalid_request** — Correct the request fields, resource identifiers, JSON body or query parameters before retrying.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_request:
+                  summary: invalid request
+                  description: Synthetic error example. Correct the request fields, resource identifiers, JSON body or query parameters before retrying.
+                  value:
+                    error:
+                      code: invalid_request
+                      message: The request is invalid.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '401':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            WWW-Authenticate:
+              schema:
+                type: string
+              description: Bearer authentication challenge.
+          description: '**authentication_required** — Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.
+
+
+            **invalid_api_key** — Use an active key for the intended environment.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                authentication_required:
+                  summary: authentication required
+                  description: 'Synthetic error example. Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.'
+                  value:
+                    error:
+                      code: authentication_required
+                      message: Sign in to continue.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                invalid_api_key:
+                  summary: invalid api key
+                  description: Synthetic error example. Use an active key for the intended environment.
+                  value:
+                    error:
+                      code: invalid_api_key
+                      message: The API key is invalid, expired, or revoked.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '403':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**permission_denied** — Ask an organization owner to grant the required role or API-key scope.
+
+
+            **insufficient_scope** — Use a key with the scope stated in this operation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                permission_denied:
+                  summary: permission denied
+                  description: Synthetic error example. Ask an organization owner to grant the required role or API-key scope.
+                  value:
+                    error:
+                      code: permission_denied
+                      message: Your role does not allow this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                insufficient_scope:
+                  summary: insufficient scope
+                  description: Synthetic error example. Use a key with the scope stated in this operation.
+                  value:
+                    error:
+                      code: insufficient_scope
+                      message: The API key does not grant this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '405':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Allow:
+              schema:
+                type: string
+              description: Comma-separated supported HTTP methods.
+          description: '**method_not_allowed** — Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                method_not_allowed:
+                  summary: method not allowed
+                  description: Synthetic error example. Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.
+                  value:
+                    error:
+                      code: method_not_allowed
+                      message: This method is not supported for this endpoint.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '413':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**response_too_large** — Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                response_too_large:
+                  summary: response too large
+                  description: Synthetic error example. Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.
+                  value:
+                    error:
+                      code: response_too_large
+                      message: This response exceeds the size limit. Request a smaller page or a segmented export.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '429':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**rate_limited** — Wait for the request window to reset and retry with backoff.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                rate_limited:
+                  summary: rate limited
+                  description: Synthetic error example. Wait for the request window to reset and retry with backoff.
+                  value:
+                    error:
+                      code: rate_limited
+                      message: The per-minute request limit has been reached.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '500':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**internal_error** — Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internal_error:
+                  summary: internal error
+                  description: Synthetic error example. Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.
+                  value:
+                    error:
+                      code: internal_error
+                      message: The request could not be completed.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '503':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**temporarily_unavailable** — Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                temporarily_unavailable:
+                  summary: temporarily unavailable
+                  description: Synthetic error example. Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.
+                  value:
+                    error:
+                      code: temporarily_unavailable
+                      message: The service is temporarily unavailable. Retry shortly.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+    post:
+      operationId: post__webhooks
+      summary: Register a public HTTPS endpoint and obtain its signing secret once
+      tags:
+      - Webhooks
+      description: 'Required API key scope: webhooks:write.'
+      security:
+      - bearerAuth: []
+      parameters: []
+      requestBody:
+        required: true
+        description: 'JSON request body. Send Content-Type: application/json with UTF-8 encoding; fields marked required must be present. Omit optional fields unless needed. Null is accepted only where explicitly shown. Unknown properties are rejected for validated request objects. Duplicate keys and nesting beyond 32 levels are rejected. Maximum body size: 1,048,576 bytes (1 MiB).'
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookRequest'
+            example:
+              url: https://integrator.example.test/webhooks/sanctionskit
+      responses:
+        '201':
+          headers:
+            X-Request-Id:
+              description: Server-generated request correlation identifier.
+              schema:
+                type: string
+                format: uuid
+          description: Successful response. JSON object with the required data key. All properties marked required are present, including keys whose value may be null. Unmarked properties can be omitted; clients should tolerate additional response properties.
+          content:
+            application/json:
+              examples:
+                success:
+                  summary: Synthetic success example
+                  description: Synthetic contract example, validated against the response schema. Invented data; no live customer, provider request, payment, message or source activation.
+                  value:
+                    data:
+                      id: 01234567-89ab-4cde-8f01-23456789abcd
+                      environment: sandbox
+                      url: https://example.test/webhooks/sanctions
+                      secret: DOCUMENTATION_EXAMPLE_NOT_A_VALID_SIGNING_SECRET
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/WebhookCreated'
+        '400':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**invalid_request** — Correct the request fields, resource identifiers, JSON body or query parameters before retrying.
+
+
+            **invalid_webhook** — Use a public HTTPS endpoint without private or reserved destinations.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_request:
+                  summary: invalid request
+                  description: Synthetic error example. Correct the request fields, resource identifiers, JSON body or query parameters before retrying.
+                  value:
+                    error:
+                      code: invalid_request
+                      message: The request is invalid.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                invalid_webhook:
+                  summary: invalid webhook
+                  description: Synthetic error example. Use a public HTTPS endpoint without private or reserved destinations.
+                  value:
+                    error:
+                      code: invalid_webhook
+                      message: Webhooks require a public HTTPS endpoint on port 443.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '401':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            WWW-Authenticate:
+              schema:
+                type: string
+              description: Bearer authentication challenge.
+          description: '**authentication_required** — Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.
+
+
+            **invalid_api_key** — Use an active key for the intended environment.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                authentication_required:
+                  summary: authentication required
+                  description: 'Synthetic error example. Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.'
+                  value:
+                    error:
+                      code: authentication_required
+                      message: Sign in to continue.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                invalid_api_key:
+                  summary: invalid api key
+                  description: Synthetic error example. Use an active key for the intended environment.
+                  value:
+                    error:
+                      code: invalid_api_key
+                      message: The API key is invalid, expired, or revoked.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '403':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**permission_denied** — Ask an organization owner to grant the required role or API-key scope.
+
+
+            **insufficient_scope** — Use a key with the scope stated in this operation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                permission_denied:
+                  summary: permission denied
+                  description: Synthetic error example. Ask an organization owner to grant the required role or API-key scope.
+                  value:
+                    error:
+                      code: permission_denied
+                      message: Your role does not allow this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                insufficient_scope:
+                  summary: insufficient scope
+                  description: Synthetic error example. Use a key with the scope stated in this operation.
+                  value:
+                    error:
+                      code: insufficient_scope
+                      message: The API key does not grant this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '405':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Allow:
+              schema:
+                type: string
+              description: Comma-separated supported HTTP methods.
+          description: '**method_not_allowed** — Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                method_not_allowed:
+                  summary: method not allowed
+                  description: Synthetic error example. Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.
+                  value:
+                    error:
+                      code: method_not_allowed
+                      message: This method is not supported for this endpoint.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '408':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**invalid_request** — Reconnect and retry using the same idempotency key and identical input where supported.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_request:
+                  summary: invalid request
+                  description: Synthetic error example. Reconnect and retry using the same idempotency key and identical input where supported.
+                  value:
+                    error:
+                      code: invalid_request
+                      message: The request body was not received within 10 seconds.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '409':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**webhook_limit_reached** — Disable an unused endpoint before adding another.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                webhook_limit_reached:
+                  summary: webhook limit reached
+                  description: Synthetic error example. Disable an unused endpoint before adding another.
+                  value:
+                    error:
+                      code: webhook_limit_reached
+                      message: At most five webhook endpoints per environment are supported.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '413':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**response_too_large** — Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.
+
+
+            **invalid_request** — Reduce the JSON request size to the documented limit.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                response_too_large:
+                  summary: response too large
+                  description: Synthetic error example. Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.
+                  value:
+                    error:
+                      code: response_too_large
+                      message: This response exceeds the size limit. Request a smaller page or a segmented export.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                invalid_request:
+                  summary: invalid request
+                  description: Synthetic error example. Reduce the JSON request size to the documented limit.
+                  value:
+                    error:
+                      code: invalid_request
+                      message: REQUEST_TOO_LARGE
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '415':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**invalid_request** — Use Content-Type: application/json and an uncompressed UTF-8 body.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_request:
+                  summary: invalid request
+                  description: 'Synthetic error example. Use Content-Type: application/json and an uncompressed UTF-8 body.'
+                  value:
+                    error:
+                      code: invalid_request
+                      message: Send application/json with UTF-8 encoding.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '429':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**rate_limited** — Wait for the request window to reset and retry with backoff.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                rate_limited:
+                  summary: rate limited
+                  description: Synthetic error example. Wait for the request window to reset and retry with backoff.
+                  value:
+                    error:
+                      code: rate_limited
+                      message: The per-minute request limit has been reached.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '500':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**internal_error** — Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internal_error:
+                  summary: internal error
+                  description: Synthetic error example. Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.
+                  value:
+                    error:
+                      code: internal_error
+                      message: The request could not be completed.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '503':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**temporarily_unavailable** — Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                temporarily_unavailable:
+                  summary: temporarily unavailable
+                  description: Synthetic error example. Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.
+                  value:
+                    error:
+                      code: temporarily_unavailable
+                      message: The service is temporarily unavailable. Retry shortly.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+  /webhooks/{id}:
+    delete:
+      operationId: delete__webhooks_id_
+      summary: Disable a webhook endpoint
+      tags:
+      - Webhooks
+      description: 'Required API key scope: webhooks:write.'
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Opaque resource identifier owned by the authenticated organization.
+      responses:
+        '200':
+          headers:
+            X-Request-Id:
+              description: Server-generated request correlation identifier.
+              schema:
+                type: string
+                format: uuid
+          description: Successful response. JSON object with the required data key. All properties marked required are present, including keys whose value may be null. Unmarked properties can be omitted; clients should tolerate additional response properties.
+          content:
+            application/json:
+              examples:
+                success:
+                  summary: Synthetic success example
+                  description: Synthetic contract example, validated against the response schema. Invented data; no live customer, provider request, payment, message or source activation.
+                  value:
+                    data:
+                      id: 01234567-89ab-4cde-8f01-23456789abcd
+                      environment: sandbox
+                      active: false
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/WebhookDisabled'
+        '400':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**invalid_request** — Correct the request fields, resource identifiers, JSON body or query parameters before retrying.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_request:
+                  summary: invalid request
+                  description: Synthetic error example. Correct the request fields, resource identifiers, JSON body or query parameters before retrying.
+                  value:
+                    error:
+                      code: invalid_request
+                      message: The request is invalid.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '401':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            WWW-Authenticate:
+              schema:
+                type: string
+              description: Bearer authentication challenge.
+          description: '**authentication_required** — Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.
+
+
+            **invalid_api_key** — Use an active key for the intended environment.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                authentication_required:
+                  summary: authentication required
+                  description: 'Synthetic error example. Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.'
+                  value:
+                    error:
+                      code: authentication_required
+                      message: Sign in to continue.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                invalid_api_key:
+                  summary: invalid api key
+                  description: Synthetic error example. Use an active key for the intended environment.
+                  value:
+                    error:
+                      code: invalid_api_key
+                      message: The API key is invalid, expired, or revoked.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '403':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**permission_denied** — Ask an organization owner to grant the required role or API-key scope.
+
+
+            **insufficient_scope** — Use a key with the scope stated in this operation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                permission_denied:
+                  summary: permission denied
+                  description: Synthetic error example. Ask an organization owner to grant the required role or API-key scope.
+                  value:
+                    error:
+                      code: permission_denied
+                      message: Your role does not allow this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                insufficient_scope:
+                  summary: insufficient scope
+                  description: Synthetic error example. Use a key with the scope stated in this operation.
+                  value:
+                    error:
+                      code: insufficient_scope
+                      message: The API key does not grant this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '404':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**not_found** — Check the identifier and selected environment. The resource must belong to your organization and remain available.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                not_found:
+                  summary: not found
+                  description: Synthetic error example. Check the identifier and selected environment. The resource must belong to your organization and remain available.
+                  value:
+                    error:
+                      code: not_found
+                      message: Webhook endpoint not found.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '405':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Allow:
+              schema:
+                type: string
+              description: Comma-separated supported HTTP methods.
+          description: '**method_not_allowed** — Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                method_not_allowed:
+                  summary: method not allowed
+                  description: Synthetic error example. Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.
+                  value:
+                    error:
+                      code: method_not_allowed
+                      message: This method is not supported for this endpoint.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '413':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**response_too_large** — Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                response_too_large:
+                  summary: response too large
+                  description: Synthetic error example. Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.
+                  value:
+                    error:
+                      code: response_too_large
+                      message: This response exceeds the size limit. Request a smaller page or a segmented export.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '429':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**rate_limited** — Wait for the request window to reset and retry with backoff.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                rate_limited:
+                  summary: rate limited
+                  description: Synthetic error example. Wait for the request window to reset and retry with backoff.
+                  value:
+                    error:
+                      code: rate_limited
+                      message: The per-minute request limit has been reached.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '500':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**internal_error** — Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internal_error:
+                  summary: internal error
+                  description: Synthetic error example. Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.
+                  value:
+                    error:
+                      code: internal_error
+                      message: The request could not be completed.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '503':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**temporarily_unavailable** — Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                temporarily_unavailable:
+                  summary: temporarily unavailable
+                  description: Synthetic error example. Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.
+                  value:
+                    error:
+                      code: temporarily_unavailable
+                      message: The service is temporarily unavailable. Retry shortly.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+  /webhooks/{id}/retry:
+    post:
+      operationId: post__webhooks_id_retry
+      summary: Retry a failed webhook delivery
+      tags:
+      - Webhooks
+      description: 'Required API key scope: webhooks:write.'
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Failed delivery UUID from GET /webhooks deliveries, not an endpoint ID.
+      responses:
+        '202':
+          headers:
+            X-Request-Id:
+              description: Server-generated request correlation identifier.
+              schema:
+                type: string
+                format: uuid
+          description: Accepted for asynchronous processing. This does not establish completed work. JSON object with the required data key. All properties marked required are present, including keys whose value may be null. Unmarked properties can be omitted; clients should tolerate additional response properties.
+          content:
+            application/json:
+              examples:
+                success:
+                  summary: Synthetic success example
+                  description: Synthetic contract example, validated against the response schema. Invented data; no live customer, provider request, payment, message or source activation.
+                  value:
+                    data:
+                      id: 01234567-89ab-4cde-8f01-23456789abce
+                      environment: sandbox
+                      status: pending
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/WebhookRetry'
+        '400':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**invalid_request** — Correct the request fields, resource identifiers, JSON body or query parameters before retrying.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_request:
+                  summary: invalid request
+                  description: Synthetic error example. Correct the request fields, resource identifiers, JSON body or query parameters before retrying.
+                  value:
+                    error:
+                      code: invalid_request
+                      message: The request is invalid.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '401':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            WWW-Authenticate:
+              schema:
+                type: string
+              description: Bearer authentication challenge.
+          description: '**authentication_required** — Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.
+
+
+            **invalid_api_key** — Use an active key for the intended environment.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                authentication_required:
+                  summary: authentication required
+                  description: 'Synthetic error example. Send Authorization: Bearer with a valid API key. An omitted header can produce authentication_required; invalid supplied credentials produce invalid_api_key.'
+                  value:
+                    error:
+                      code: authentication_required
+                      message: Sign in to continue.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                invalid_api_key:
+                  summary: invalid api key
+                  description: Synthetic error example. Use an active key for the intended environment.
+                  value:
+                    error:
+                      code: invalid_api_key
+                      message: The API key is invalid, expired, or revoked.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '403':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**permission_denied** — Ask an organization owner to grant the required role or API-key scope.
+
+
+            **insufficient_scope** — Use a key with the scope stated in this operation.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                permission_denied:
+                  summary: permission denied
+                  description: Synthetic error example. Ask an organization owner to grant the required role or API-key scope.
+                  value:
+                    error:
+                      code: permission_denied
+                      message: Your role does not allow this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+                insufficient_scope:
+                  summary: insufficient scope
+                  description: Synthetic error example. Use a key with the scope stated in this operation.
+                  value:
+                    error:
+                      code: insufficient_scope
+                      message: The API key does not grant this action.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '404':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**not_found** — Check the identifier and selected environment. The resource must belong to your organization and remain available.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                not_found:
+                  summary: not found
+                  description: Synthetic error example. Check the identifier and selected environment. The resource must belong to your organization and remain available.
+                  value:
+                    error:
+                      code: not_found
+                      message: Failed delivery not found.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '405':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Allow:
+              schema:
+                type: string
+              description: Comma-separated supported HTTP methods.
+          description: '**method_not_allowed** — Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                method_not_allowed:
+                  summary: method not allowed
+                  description: Synthetic error example. Use a method in the Allow response header. OPTIONS lists supported methods; HEAD follows GET authorization and returns no body.
+                  value:
+                    error:
+                      code: method_not_allowed
+                      message: This method is not supported for this endpoint.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '409':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**webhook_disabled** — Use an active endpoint; deliveries to disabled endpoints cannot be retried.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                webhook_disabled:
+                  summary: webhook disabled
+                  description: Synthetic error example. Use an active endpoint; deliveries to disabled endpoints cannot be retried.
+                  value:
+                    error:
+                      code: webhook_disabled
+                      message: This webhook endpoint is disabled. Failed deliveries cannot be retried.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '413':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**response_too_large** — Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                response_too_large:
+                  summary: response too large
+                  description: Synthetic error example. Reduce the requested page size or use the documented segmented case archive. No evidence is silently truncated.
+                  value:
+                    error:
+                      code: response_too_large
+                      message: This response exceeds the size limit. Request a smaller page or a segmented export.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '429':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**rate_limited** — Wait for the request window to reset and retry with backoff.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                rate_limited:
+                  summary: rate limited
+                  description: Synthetic error example. Wait for the request window to reset and retry with backoff.
+                  value:
+                    error:
+                      code: rate_limited
+                      message: The per-minute request limit has been reached.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '500':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+          description: '**internal_error** — Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internal_error:
+                  summary: internal error
+                  description: Synthetic error example. Retry with backoff. For writes reuse the same idempotency key and identical input; include requestId when contacting support.
+                  value:
+                    error:
+                      code: internal_error
+                      message: The request could not be completed.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+        '503':
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Server-generated correlation identifier, also returned in error.requestId.
+            Retry-After:
+              schema:
+                type: string
+              description: When present, a delay in seconds or an HTTP-date before which the client should not retry. Service-unavailable responses default to a one-second delay unless another safe value is supplied. A usage allowance error may require quota recovery instead of retrying.
+          description: '**temporarily_unavailable** — Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                temporarily_unavailable:
+                  summary: temporarily unavailable
+                  description: Synthetic error example. Honor Retry-After when present and retry with bounded backoff. Follow this endpoint’s retry contract; preserve the same key and input for idempotent writes. Contact support with requestId if the failure persists.
+                  value:
+                    error:
+                      code: temporarily_unavailable
+                      message: The service is temporarily unavailable. Retry shortly.
+                      requestId: 01234567-89ab-4cde-8f01-23456789abcd
+components:
+  schemas:
+    WebhookRetry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        environment:
+          type: string
+          enum:
+          - sandbox
+          - production
+        status:
+          const: pending
+      required:
+      - id
+      - environment
+      - status
+    Webhooks:
+      type: object
+      properties:
+        endpoints:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              environment:
+                type: string
+                enum:
+                - sandbox
+                - production
+              url:
+                type: string
+              active:
+                type: boolean
+              created_at:
+                type: string
+                format: date-time
+            required:
+            - id
+            - environment
+            - url
+            - active
+            - created_at
+        deliveries:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              environment:
+                type: string
+                enum:
+                - sandbox
+                - production
+              endpoint_id:
+                type: string
+                format: uuid
+              event_id:
+                type: string
+              status:
+                type: string
+              attempts:
+                type: integer
+                minimum: 0
+              next_attempt_at:
+                type: string
+                format: date-time
+              last_status:
+                anyOf:
+                - type: integer
+                  minimum: 0
+                - type: 'null'
+              created_at:
+                type: string
+                format: date-time
+            required:
+            - id
+            - environment
+            - endpoint_id
+            - event_id
+            - status
+            - attempts
+            - next_attempt_at
+            - last_status
+            - created_at
+      required:
+      - endpoints
+      - deliveries
+    WebhookRequest:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      type: object
+      properties:
+        url:
+          type: string
+          maxLength: 2048
+          format: uri
+          description: HTTPS endpoint that receives signed events. Public DNS resolution and destination restrictions apply; local/private addresses and redirects are rejected. At most five active endpoints per environment.
+      required:
+      - url
+      additionalProperties: false
+    WebhookCreated:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        environment:
+          type: string
+          enum:
+          - sandbox
+          - production
+        url:
+          type: string
+        secret:
+          type: string
+          description: Signing secret shown only at creation. Store securely and use it to verify webhook signatures; list operations never return it.
+      required:
+      - id
+      - environment
+      - url
+      - secret
+    Error:
+      type: object
+      required:
+      - error
+      description: Failure envelope for every documented non-2xx API response. No data property is returned. Switch on error.code; messages may change.
+      properties:
+        error:
+          type: object
+          required:
+          - code
+          - message
+          - requestId
+          properties:
+            code:
+              type: string
+              description: Machine-readable failure code. See this operation’s status-specific examples for codes and recovery.
+            message:
+              type: string
+              description: Human-readable explanation. Do not parse this text to control application behavior.
+            requestId:
+              type: string
+              format: uuid
+              description: Server correlation ID, also returned in X-Request-Id. Include this ID in support requests.
+            details:
+              description: Optional JSON details for client and validation failures. Validation failures return an array of { path, message } issues; other 4xx codes may return a code-specific object. Server failures omit details. Never assume this key is present.
+              anyOf:
+              - type: array
+                maxItems: 50
+                items:
+                  type: object
+                  required:
+                  - path
+                  - message
+                  properties:
+                    path:
+                      type: string
+                      maxLength: 160
+                      description: Dot-separated invalid field path, including array indexes.
+                    message:
+                      type: string
+                      maxLength: 300
+                      description: Validation problem for this field.
+              - type: object
+                additionalProperties: true
+              - type:
+                - string
+                - number
+                - boolean
+                - 'null'
+            detailsTruncated:
+              type: boolean
+              description: True when only the first 50 validation issues are returned. Validation paths and messages are bounded.
+    WebhookDisabled:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        environment:
+          type: string
+          enum:
+          - sandbox
+          - production
+        active:
+          const: false
+      required:
+      - id
+      - environment
+      - active
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: sk_test_... or sk_live_...
+x-docs-revision: 499779e00214c23622695c6d7114fb3656edf29161460d9f9e9d2ab65d0cf087

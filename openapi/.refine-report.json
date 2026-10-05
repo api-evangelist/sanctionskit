@@ -1,0 +1,27 @@
+{
+  "provider": "sanctionskit",
+  "sources": [
+    "_original/sanctionskit-openapi.json"
+  ],
+  "outputs": [
+    "sanctionskit-batches-and-files-api-openapi.yml",
+    "sanctionskit-counterparties-api-openapi.yml",
+    "sanctionskit-monitoring-api-openapi.yml",
+    "sanctionskit-reports-api-openapi.yml",
+    "sanctionskit-review-evidence-api-openapi.yml",
+    "sanctionskit-screening-and-evidence-api-openapi.yml",
+    "sanctionskit-screening-policies-api-openapi.yml",
+    "sanctionskit-source-discovery-api-openapi.yml",
+    "sanctionskit-usage-api-openapi.yml",
+    "sanctionskit-webhooks-api-openapi.yml"
+  ],
+  "archived": [],
+  "errors": [],
+  "warnings": [],
+  "notes": [
+    "sourced from openapi/_original/ (1 archived document(s)); previously refined output at the top level was skipped rather than re-split",
+    "sanctionskit-openapi.json: upgraded openapi 3.1.0 -> OpenAPI 3.2.0",
+    "apis.yml register: written (+10 apis, 11 total)"
+  ],
+  "skipped": []
+}

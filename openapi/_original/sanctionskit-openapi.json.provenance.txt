@@ -1,0 +1,6 @@
+generated: '2026-10-05'
+method: probed
+source: https://www.sanctionskit.com/openapi.json
+operations: 42
+version: 3.1.0
+note: saved verbatim at the provider's request (api-evangelist/sanctionskit#1); server is the relative /api/v1 on https://www.sanctionskit.com

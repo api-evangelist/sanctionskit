@@ -12,7 +12,7 @@ x-tier: profiled
 x-tier-reason: enrichment pass 2026-10-02 (modular-v1; was harvest)
 specificationVersion: '0.20'
 created: '2026-10-02'
-modified: '2026-10-02'
+modified: '2026-10-05'
 tags:
 - Company
 - Sanctions
@@ -88,12 +88,202 @@ common:
   url: https://app.getpostman.com/run-collection/58547371-68c65997-3558-40b8-ad72-e2eb06706cb5?action=collection%2Ffork&source=rip_markdown&collection-url=entityId%3D58547371-68c65997-3558-40b8-ad72-e2eb06706cb5%26entityType%3Dcollection
 - type: GitHubOrganization
   url: https://github.com/SanctionsKit
+- type: OpenAPI
+  name: OpenAPI (provider-hosted)
+  url: https://www.sanctionskit.com/openapi.json
+  description: OpenAPI 3.1.0, 35 paths and 42 operations, server /api/v1 on https://www.sanctionskit.com.
+- type: MCPServer
+  url: mcp/sanctionskit-mcp.yml
+- type: MCPServer
+  name: SanctionsKit developer MCP (Streamable HTTP)
+  url: https://www.sanctionskit.com/mcp
+- type: Documentation
+  name: MCP documentation
+  url: https://www.sanctionskit.com/resources/mcp
+- type: OAuthProtectedResource
+  url: https://www.sanctionskit.com/.well-known/oauth-protected-resource/mcp
 apis:
-- name: SanctionsKit API
-  description: SanctionsKit screening API providing endpoints for source discovery, screening policies, monitoring, webhooks, and reporting.
+- aid: sanctionskit:sanctionskit-batches-and-files-api
+  name: SanctionsKit Batches and files API
+  description: >-
+    Batch screening operations of the SanctionsKit API — list batches with progress, accept up to 100 inline requests or an authorized private upload, read batch and row outcomes, cancel pending rows, authorize direct private uploads and download private files after tenant authorization.
   humanURL: https://www.sanctionskit.com/docs/api-reference
   baseURL: https://www.sanctionskit.com/api/v1
-  aid: sanctionskit:sanctionskit-api
+  tags:
+  - Batches and files
+  properties:
+  - type: OpenAPI
+    url: openapi/sanctionskit-batches-and-files-api-openapi.yml
+  - type: OpenAPI
+    name: OpenAPI (provider-hosted)
+    url: https://www.sanctionskit.com/openapi.json
+  - type: APIReference
+    url: https://www.sanctionskit.com/docs/api-reference
+  - type: Documentation
+    url: https://www.sanctionskit.com/docs
+- aid: sanctionskit:sanctionskit-counterparties-api
+  name: SanctionsKit Counterparties API
+  description: >-
+    Counterparty operations of the SanctionsKit API — list persistent customer and vendor records, read a counterparty with its linked screening, case and monitor history, and page through that history including expired evidence metadata.
+  humanURL: https://www.sanctionskit.com/docs/api-reference
+  baseURL: https://www.sanctionskit.com/api/v1
+  tags:
+  - Counterparties
+  properties:
+  - type: OpenAPI
+    url: openapi/sanctionskit-counterparties-api-openapi.yml
+  - type: OpenAPI
+    name: OpenAPI (provider-hosted)
+    url: https://www.sanctionskit.com/openapi.json
+  - type: APIReference
+    url: https://www.sanctionskit.com/docs/api-reference
+  - type: Documentation
+    url: https://www.sanctionskit.com/docs
+- aid: sanctionskit:sanctionskit-monitoring-api
+  name: SanctionsKit Monitoring API
+  description: >-
+    Ongoing monitoring operations of the SanctionsKit API — create, read, update and stop monitored subjects, read monitor health and estimated period capacity, pause, resume or change cadence, and read the inbox of changes, failures and reviews due for renewal with before-and-after previews.
+  humanURL: https://www.sanctionskit.com/docs/api-reference
+  baseURL: https://www.sanctionskit.com/api/v1
+  tags:
+  - Monitoring
+  properties:
+  - type: OpenAPI
+    url: openapi/sanctionskit-monitoring-api-openapi.yml
+  - type: OpenAPI
+    name: OpenAPI (provider-hosted)
+    url: https://www.sanctionskit.com/openapi.json
+  - type: APIReference
+    url: https://www.sanctionskit.com/docs/api-reference
+  - type: Documentation
+    url: https://www.sanctionskit.com/docs
+- aid: sanctionskit:sanctionskit-reports-api
+  name: SanctionsKit Reports API
+  description: >-
+    Reporting operations of the SanctionsKit API — backlog and period screening and reviewer activity, a bounded screening CSV, case audit packets in JSON or PDF, case archive export, and case retention governance.
+  humanURL: https://www.sanctionskit.com/docs/api-reference
+  baseURL: https://www.sanctionskit.com/api/v1
+  tags:
+  - Reports
+  properties:
+  - type: OpenAPI
+    url: openapi/sanctionskit-reports-api-openapi.yml
+  - type: OpenAPI
+    name: OpenAPI (provider-hosted)
+    url: https://www.sanctionskit.com/openapi.json
+  - type: APIReference
+    url: https://www.sanctionskit.com/docs/api-reference
+  - type: Documentation
+    url: https://www.sanctionskit.com/docs
+- aid: sanctionskit:sanctionskit-review-evidence-api
+  name: SanctionsKit Review evidence API
+  description: >-
+    Analyst review operations of the SanctionsKit API — list and open review cases on retained screenings, read cases with append-only decisions, read investigations with match decisions, notes and attachment metadata, download text attachments, and list retained human review decisions.
+  humanURL: https://www.sanctionskit.com/docs/api-reference
+  baseURL: https://www.sanctionskit.com/api/v1
+  tags:
+  - Review evidence
+  properties:
+  - type: OpenAPI
+    url: openapi/sanctionskit-review-evidence-api-openapi.yml
+  - type: OpenAPI
+    name: OpenAPI (provider-hosted)
+    url: https://www.sanctionskit.com/openapi.json
+  - type: APIReference
+    url: https://www.sanctionskit.com/docs/api-reference
+  - type: Documentation
+    url: https://www.sanctionskit.com/docs
+- aid: sanctionskit:sanctionskit-screening-and-evidence-api
+  name: SanctionsKit Screening and evidence API
+  description: >-
+    Screening operations of the SanctionsKit API — screen one subject against explicitly selected source coverage, list and retrieve retained results, and download retained JSON evidence. A potential match is for human review; a no-match applies only to the selected, qualified sources.
+    The Screening and evidence API from SanctionsKit — 4 operation(s) for screening and evidence.
+  humanURL: https://www.sanctionskit.com/docs/api-reference
+  baseURL: https://www.sanctionskit.com/api/v1
+  tags:
+  - Screening and evidence
+  properties:
+  - type: OpenAPI
+    url: openapi/sanctionskit-screening-and-evidence-api-openapi.yml
+  - type: OpenAPI
+    name: OpenAPI (provider-hosted)
+    url: https://www.sanctionskit.com/openapi.json
+  - type: APIReference
+    url: https://www.sanctionskit.com/docs/api-reference
+  - type: Documentation
+    url: https://www.sanctionskit.com/docs
+- aid: sanctionskit:sanctionskit-screening-policies-api
+  name: SanctionsKit Screening policies API
+  description: >-
+    Screening policy operations of the SanctionsKit API — read current approved screening policy versions and the current version of one policy.
+  humanURL: https://www.sanctionskit.com/docs/api-reference
+  baseURL: https://www.sanctionskit.com/api/v1
+  tags:
+  - Screening policies
+  properties:
+  - type: OpenAPI
+    url: openapi/sanctionskit-screening-policies-api-openapi.yml
+  - type: OpenAPI
+    name: OpenAPI (provider-hosted)
+    url: https://www.sanctionskit.com/openapi.json
+  - type: APIReference
+    url: https://www.sanctionskit.com/docs/api-reference
+  - type: Documentation
+    url: https://www.sanctionskit.com/docs
+- aid: sanctionskit:sanctionskit-source-discovery-api
+  name: SanctionsKit Source discovery API
+  description: >-
+    Source discovery operation of the SanctionsKit API — discover source capabilities, qualification and availability before selecting screening coverage.
+  humanURL: https://www.sanctionskit.com/docs/api-reference
+  baseURL: https://www.sanctionskit.com/api/v1
+  tags:
+  - Source discovery
+  properties:
+  - type: OpenAPI
+    url: openapi/sanctionskit-source-discovery-api-openapi.yml
+  - type: OpenAPI
+    name: OpenAPI (provider-hosted)
+    url: https://www.sanctionskit.com/openapi.json
+  - type: APIReference
+    url: https://www.sanctionskit.com/docs/api-reference
+  - type: Documentation
+    url: https://www.sanctionskit.com/docs
+- aid: sanctionskit:sanctionskit-usage-api
+  name: SanctionsKit Usage API
+  description: >-
+    Usage operation of the SanctionsKit API — read the period allowance, used subjects and pending reservations. Each completed subject consumes one allowance unit; failed rows and idempotent retries do not.
+  humanURL: https://www.sanctionskit.com/docs/api-reference
+  baseURL: https://www.sanctionskit.com/api/v1
+  tags:
+  - Usage
+  properties:
+  - type: OpenAPI
+    url: openapi/sanctionskit-usage-api-openapi.yml
+  - type: OpenAPI
+    name: OpenAPI (provider-hosted)
+    url: https://www.sanctionskit.com/openapi.json
+  - type: APIReference
+    url: https://www.sanctionskit.com/docs/api-reference
+  - type: Documentation
+    url: https://www.sanctionskit.com/docs
+- aid: sanctionskit:sanctionskit-webhooks-api
+  name: SanctionsKit Webhooks API
+  description: >-
+    Webhook endpoint operations of the SanctionsKit API — read endpoints and recent delivery history, register a public HTTPS endpoint and receive its signing secret once, disable an endpoint, and retry a failed delivery.
+  humanURL: https://www.sanctionskit.com/docs/api-reference
+  baseURL: https://www.sanctionskit.com/api/v1
+  tags:
+  - Webhooks
+  properties:
+  - type: OpenAPI
+    url: openapi/sanctionskit-webhooks-api-openapi.yml
+  - type: OpenAPI
+    name: OpenAPI (provider-hosted)
+    url: https://www.sanctionskit.com/openapi.json
+  - type: APIReference
+    url: https://www.sanctionskit.com/docs/api-reference
+  - type: Documentation
+    url: https://www.sanctionskit.com/docs
 x-submission-notes: Sanctions screening API for people/organizations with review workflows and a free sandbox key.
 x-submission-probe: root 200; docs 200; OpenAPI 3.1.0 35 paths (server /api/v1); llms.txt 200; 404 probe 404
 x-submitted-by: support@sanctionskit.com (apis.io/add, 2026-09-28)
@@ -103,3 +293,21 @@ x-enrichment:
   artifacts_added: 16
   pass: modular-v1
   engine: identity=local,contract=local,surfaces=local,docs=local,regulatory=local
+x-correction-request:
+  requested: '2026-10-05'
+  source:
+  - https://github.com/api-evangelist/sanctionskit/issues/1
+  request: 'Issue #1 (Alex, SanctionsKit), verified live 2026-10-05. https://www.sanctionskit.com/openapi.json returns
+    200: OpenAPI 3.1.0, "SanctionsKit API" 1.0.0, server /api/v1, 35 paths and 42 operations across 10 tags, bearer
+    API key (sk_test_ / sk_live_). https://www.sanctionskit.com/mcp answers an anonymous Streamable HTTP initialize
+    (200, serverInfo sanctionskit 1.0.0, protocol 2025-06-18) and tools/list (200, 9 tools: search_docs, get_doc,
+    get_api_schema, validate_screening_request are public; list_sources, run_sandbox_screening, get_screening_result,
+    get_usage, get_profile declare OAuth 2 and act on the sandbox workspace). https://www.sanctionskit.com/.well-known/oauth-protected-resource/mcp
+    returns 200 with authorization server https://www.sanctionskit.com and scopes sources:read, screenings:write,
+    results:read, usage:read. https://www.sanctionskit.com/resources/mcp returns 200; an invented /resources path
+    returns a real 404. The provider''s own validator run was not repeated here.'
+  applied: '2026-10-05'
+  applied_note: Saved the OpenAPI verbatim as openapi/_original/sanctionskit-openapi.json and split it into 10 per-tag
+    specs registered as API entries, each with the local and provider-hosted OpenAPI; the earlier contract-less "SanctionsKit
+    API" entry is replaced by them. Added provider-level OpenAPI, MCPServer, MCP documentation and OAuth protected-resource
+    pointers, and rewrote mcp/sanctionskit-mcp.yml from the live tools/list (9 tools with descriptions and auth).
