@@ -21,7 +21,18 @@
   "notes": [
     "sourced from openapi/_original/ (1 archived document(s)); previously refined output at the top level was skipped rather than re-split",
     "sanctionskit-openapi.json: upgraded openapi 3.1.0 -> OpenAPI 3.2.0",
-    "apis.yml register: written (+10 apis, 11 total)"
+    "apis.yml register: already-registered"
   ],
-  "skipped": []
+  "skipped": [
+    "sanctionskit-batches-and-files-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "sanctionskit-counterparties-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "sanctionskit-monitoring-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "sanctionskit-reports-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "sanctionskit-review-evidence-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "sanctionskit-screening-and-evidence-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "sanctionskit-screening-policies-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "sanctionskit-source-discovery-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "sanctionskit-usage-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "sanctionskit-webhooks-api-openapi.yml: previously refined output, superseded by openapi/_original/"
+  ]
 }

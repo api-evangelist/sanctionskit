@@ -1153,111 +1153,6 @@ paths:
                       requestId: 01234567-89ab-4cde-8f01-23456789abcd
 components:
   schemas:
-    WebhookRetry:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        environment:
-          type: string
-          enum:
-          - sandbox
-          - production
-        status:
-          const: pending
-      required:
-      - id
-      - environment
-      - status
-    Webhooks:
-      type: object
-      properties:
-        endpoints:
-          type: array
-          items:
-            type: object
-            properties:
-              id:
-                type: string
-                format: uuid
-              environment:
-                type: string
-                enum:
-                - sandbox
-                - production
-              url:
-                type: string
-              active:
-                type: boolean
-              created_at:
-                type: string
-                format: date-time
-            required:
-            - id
-            - environment
-            - url
-            - active
-            - created_at
-        deliveries:
-          type: array
-          items:
-            type: object
-            properties:
-              id:
-                type: string
-                format: uuid
-              environment:
-                type: string
-                enum:
-                - sandbox
-                - production
-              endpoint_id:
-                type: string
-                format: uuid
-              event_id:
-                type: string
-              status:
-                type: string
-              attempts:
-                type: integer
-                minimum: 0
-              next_attempt_at:
-                type: string
-                format: date-time
-              last_status:
-                anyOf:
-                - type: integer
-                  minimum: 0
-                - type: 'null'
-              created_at:
-                type: string
-                format: date-time
-            required:
-            - id
-            - environment
-            - endpoint_id
-            - event_id
-            - status
-            - attempts
-            - next_attempt_at
-            - last_status
-            - created_at
-      required:
-      - endpoints
-      - deliveries
-    WebhookRequest:
-      $schema: https://json-schema.org/draft/2020-12/schema
-      type: object
-      properties:
-        url:
-          type: string
-          maxLength: 2048
-          format: uri
-          description: HTTPS endpoint that receives signed events. Public DNS resolution and destination restrictions apply; local/private addresses and redirects are rejected. At most five active endpoints per environment.
-      required:
-      - url
-      additionalProperties: false
     WebhookCreated:
       type: object
       properties:
@@ -1348,6 +1243,111 @@ components:
       - id
       - environment
       - active
+    WebhookRequest:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      type: object
+      properties:
+        url:
+          type: string
+          maxLength: 2048
+          format: uri
+          description: HTTPS endpoint that receives signed events. Public DNS resolution and destination restrictions apply; local/private addresses and redirects are rejected. At most five active endpoints per environment.
+      required:
+      - url
+      additionalProperties: false
+    Webhooks:
+      type: object
+      properties:
+        endpoints:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              environment:
+                type: string
+                enum:
+                - sandbox
+                - production
+              url:
+                type: string
+              active:
+                type: boolean
+              created_at:
+                type: string
+                format: date-time
+            required:
+            - id
+            - environment
+            - url
+            - active
+            - created_at
+        deliveries:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              environment:
+                type: string
+                enum:
+                - sandbox
+                - production
+              endpoint_id:
+                type: string
+                format: uuid
+              event_id:
+                type: string
+              status:
+                type: string
+              attempts:
+                type: integer
+                minimum: 0
+              next_attempt_at:
+                type: string
+                format: date-time
+              last_status:
+                anyOf:
+                - type: integer
+                  minimum: 0
+                - type: 'null'
+              created_at:
+                type: string
+                format: date-time
+            required:
+            - id
+            - environment
+            - endpoint_id
+            - event_id
+            - status
+            - attempts
+            - next_attempt_at
+            - last_status
+            - created_at
+      required:
+      - endpoints
+      - deliveries
+    WebhookRetry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        environment:
+          type: string
+          enum:
+          - sandbox
+          - production
+        status:
+          const: pending
+      required:
+      - id
+      - environment
+      - status
   securitySchemes:
     bearerAuth:
       type: http

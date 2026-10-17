@@ -1930,7 +1930,7 @@ paths:
                       requestId: 01234567-89ab-4cde-8f01-23456789abcd
 components:
   schemas:
-    ArchiveFinding:
+    ArchiveAuditEvent:
       type: object
       properties:
         id:
@@ -1938,34 +1938,16 @@ components:
           format: uuid
         organization_id:
           type: string
-        environment:
-          type: string
-        case_id:
-          type: string
-          format: uuid
-        screening_id:
-          type: string
-          format: uuid
-        source_id:
-          type: string
-        record_id:
-          type: string
-        field:
-          type: string
-        value:
-          type: string
-        source_reference:
-          type: string
-        verification:
-          type: string
-        comparison:
-          type: string
-        notes:
-          type: string
-        content:
-          type: string
         actor_id:
           type: string
+        action:
+          type: string
+        resource_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+        details:
+          description: Retained category-specific JSON value; keys may vary by event or historical version.
         created_at:
           type: string
           format: date-time
@@ -1977,300 +1959,150 @@ components:
       required:
       - id
       - organization_id
-      - environment
-      - case_id
-      - screening_id
-      - source_id
-      - record_id
-      - field
-      - value
-      - source_reference
-      - verification
-      - comparison
-      - notes
-      - content
       - actor_id
+      - action
+      - resource_id
+      - details
       - created_at
       - expires_at
-      description: Retained record for archive category findings. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
-    ScreeningRequest:
+      description: Retained record for archive category audit. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
+    Error:
+      type: object
+      required:
+      - error
+      description: Failure envelope for every documented non-2xx API response. No data property is returned. Switch on error.code; messages may change.
+      properties:
+        error:
+          type: object
+          required:
+          - code
+          - message
+          - requestId
+          properties:
+            code:
+              type: string
+              description: Machine-readable failure code. See this operation’s status-specific examples for codes and recovery.
+            message:
+              type: string
+              description: Human-readable explanation. Do not parse this text to control application behavior.
+            requestId:
+              type: string
+              format: uuid
+              description: Server correlation ID, also returned in X-Request-Id. Include this ID in support requests.
+            details:
+              description: Optional JSON details for client and validation failures. Validation failures return an array of { path, message } issues; other 4xx codes may return a code-specific object. Server failures omit details. Never assume this key is present.
+              anyOf:
+              - type: array
+                maxItems: 50
+                items:
+                  type: object
+                  required:
+                  - path
+                  - message
+                  properties:
+                    path:
+                      type: string
+                      maxLength: 160
+                      description: Dot-separated invalid field path, including array indexes.
+                    message:
+                      type: string
+                      maxLength: 300
+                      description: Validation problem for this field.
+              - type: object
+                additionalProperties: true
+              - type:
+                - string
+                - number
+                - boolean
+                - 'null'
+            detailsTruncated:
+              type: boolean
+              description: True when only the first 50 validation issues are returned. Validation paths and messages are bounded.
+    ArchiveScreening:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+        environment:
+          type: string
+        subject:
+          anyOf:
+          - $ref: '#/components/schemas/Subject'
+          - type: 'null'
+        request:
+          anyOf:
+          - $ref: '#/components/schemas/ScreeningRequest'
+          - type: 'null'
+        result:
+          $ref: '#/components/schemas/ScreeningResult'
+        dataset_id:
+          type: string
+        retention:
+          type: string
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        retention_expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        created_at:
+          type: string
+          format: date-time
+        counterparty_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+      required:
+      - id
+      - organization_id
+      - environment
+      - subject
+      - request
+      - result
+      - dataset_id
+      - retention
+      - expires_at
+      - retention_expires_at
+      - created_at
+      - counterparty_id
+      description: Retained record for archive category screenings. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
+    AppliedMatchingPolicy:
       $schema: https://json-schema.org/draft/2020-12/schema
       type: object
       properties:
-        subject:
-          type: object
-          properties:
-            name:
-              type: string
-              minLength: 2
-              maxLength: 300
-              description: Name to compare with publisher records. Leading and trailing whitespace is removed; provide the fullest reliable name available.
-            entityType:
-              default: person
-              type: string
-              enum:
-              - person
-              - organization
-              - vessel
-              - aircraft
-              - other
-              description: Type of subject. Defaults to person when omitted. Every selected source must support this type.
-            identifiers:
-              default: []
-              maxItems: 20
-              type: array
-              items:
-                type: object
-                properties:
-                  type:
-                    type: string
-                    minLength: 1
-                    maxLength: 80
-                    description: Identifier scheme, such as passport, national_id, registration, lei, imo or mmsi. Matching normalizes supported scheme aliases.
-                  value:
-                    type: string
-                    minLength: 1
-                    maxLength: 160
-                    description: Identifier value. Send the original value; scheme-specific normalization is applied during matching.
-                  issuer:
-                    type: string
-                    minLength: 1
-                    maxLength: 100
-                    description: Optional issuing authority or country. Omit when unknown; do not send null.
-                required:
-                - type
-                - value
-                additionalProperties: false
-              description: Typed identifiers used for exact matching, such as passport, national_id, registration, lei, imo or mmsi. Defaults to an empty array. Use the publisher’s identifier scheme; custom scheme names are accepted.
-            birthDate:
-              anyOf:
-              - type: string
-                pattern: ^(?!0000)\d{4}$
-              - type: string
-                pattern: ^(?!0000)\d{4}-(0[1-9]|1[0-2])$
-              - type: string
-                allOf:
-                - pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))$
-                - pattern: ^(?!0000)
-              description: 'Known date or partial date: YYYY, YYYY-MM or YYYY-MM-DD. Preserve known precision; do not invent a month or day. Year 0000 and invalid dates are rejected.'
-            country:
-              type: string
-              minLength: 2
-              maxLength: 100
-              description: Known country name or code used as supporting identity evidence. It is not a source-selection or geographic coverage filter.
-          required:
-          - name
-          additionalProperties: false
-          description: Identity to screen. name is required; entityType defaults to person and identifiers defaults to an empty array.
-        counterpartyId:
+        version:
           type: string
-          format: uuid
-          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
-          description: Optional existing active counterparty UUID in the same organization and environment. The submitted subject must match its current identity; this does not create a counterparty.
-        policy:
-          type: object
-          properties:
-            id:
-              type: string
-              format: uuid
-              pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
-              description: Policy UUID from GET /policies.
-            version:
-              type: integer
-              exclusiveMinimum: 0
-              maximum: 9007199254740991
-              description: Exact approved policy version from GET /policies. Reload the policy if that version is no longer available.
-          required:
-          - id
-          - version
-          additionalProperties: false
-          description: Approved organization policy reference. Required when GET /policies returns requirePolicy=true. A supplied policy must be current and compatible with the subject and requested coverage.
-          x-required-when: GET /policies returns requirePolicy=true for the current API key environment.
-        reference:
-          type: string
-          maxLength: 160
-          description: Optional caller reference (up to 160 characters). It is retained with standard evidence and returned by GET /results/{id}; it is null in minimal-retention retrieval.
-        sources:
-          minItems: 1
-          maxItems: 512
-          type: array
-          items:
-            type: string
-            minLength: 1
-            maxLength: 80
-          description: Explicit source IDs from GET /sources. Provide sources or package, exactly one. Every selected source must be available, fresh and support the subject type; unavailable coverage fails closed.
-        package:
-          type: string
-          minLength: 1
-          maxLength: 80
-          description: One versioned coverage package, mutually exclusive with sources. Sandbox accepts only sandbox@1. Use only a package available to the selected environment; no implicit global coverage is applied.
-        retention:
-          default: standard
+        profile:
           type: string
           enum:
           - standard
-          - minimal
-          description: standard retains inputs and evidence under organization/case policy. minimal is available only for individual API-key screenings, lasts 24 hours, omits submitted inputs, and cannot create a review case. Governance requirements can require standard. Defaults to standard.
-      required:
-      - subject
-      additionalProperties: false
-      oneOf:
-      - required:
-        - sources
-        not:
-          required:
-          - package
-      - required:
-        - package
-        not:
-          required:
-          - sources
-      description: Single subject input. Exactly one of sources or package is required. Only subject is unconditionally required; coverage and approved policy also have conditional requirements described below.
-    MatchAssessment:
-      $schema: https://json-schema.org/draft/2020-12/schema
-      type: object
-      properties:
-        name:
-          anyOf:
-          - type: object
-            properties:
-              similarity:
-                type: integer
-                minimum: 0
-                maximum: 100
-              method:
-                type: string
-              aliasKind:
-                type: string
-                enum:
-                - primary
-                - alias
-              aliasQuality:
-                type: string
-                enum:
-                - strong
-                - weak
-                - unknown
-            required:
-            - similarity
-            - method
-            - aliasKind
-            - aliasQuality
-            additionalProperties: false
-          - type: 'null'
-        identifiers:
-          type: object
-          properties:
-            status:
-              type: string
-              enum:
-              - agreement
-              - conflict
-              - not_supplied
-              - unavailable
-              - not_comparable
-            matched:
-              type: integer
-              minimum: 0
-              maximum: 9007199254740991
-            issuerAgreements:
-              type: integer
-              minimum: 0
-              maximum: 9007199254740991
-            issuerUnknown:
-              type: integer
-              minimum: 0
-              maximum: 9007199254740991
-            conflicts:
-              type: integer
-              minimum: 0
-              maximum: 9007199254740991
-          required:
-          - status
-          - matched
-          - issuerAgreements
-          - issuerUnknown
-          - conflicts
-          additionalProperties: false
-        birthDate:
-          type: object
-          properties:
-            status:
-              type: string
-              enum:
-              - agreement
-              - conflict
-              - not_supplied
-              - unavailable
-              - not_comparable
-            precision:
-              type: string
-              enum:
-              - year
-              - month
-              - day
-          required:
-          - status
-          additionalProperties: false
-        country:
-          type: object
-          properties:
-            status:
-              type: string
-              enum:
-              - agreement
-              - conflict
-              - not_supplied
-              - unavailable
-              - not_comparable
-          required:
-          - status
-          additionalProperties: false
-        entityType:
-          type: object
-          properties:
-            status:
-              type: string
-              enum:
-              - agreement
-              - conflict
-              - not_supplied
-              - unavailable
-              - not_comparable
-          required:
-          - status
-          additionalProperties: false
-        reviewTier:
-          type: string
-          enum:
-          - identifier
-          - corroborated
-          - conflicting
-          - name_only
-        alertBasis:
-          type: string
-          enum:
-          - identifier
-          - name
-          - name_and_birth_date
-        hasConflicts:
-          type: boolean
-        sameNameCandidates:
+          - focused
+        nameThreshold:
           type: integer
           minimum: 0
-          maximum: 9007199254740991
+          maximum: 100
+        corroboratedNameThreshold:
+          type: integer
+          minimum: 0
+          maximum: 100
+        retrievalVersion:
+          type: string
       required:
-      - name
-      - identifiers
-      - birthDate
-      - country
-      - entityType
-      - reviewTier
-      - alertBasis
-      - hasConflicts
-      - sameNameCandidates
+      - version
+      - profile
+      - nameThreshold
+      - corroboratedNameThreshold
+      - retrievalVersion
       additionalProperties: false
-      description: Retained name similarity, identity comparison states and review evidence tier. Contains no copied subject values. Missing information, conflicts and partial dates remain distinct; an evidence tier is not a finding of identity or wrongdoing.
+      description: Effective matching profile and retrieval version retained at screening, including no-match results. Historical results can omit this snapshot. Profiles filter alerts within the same candidate retrieval; they are not population-calibrated probabilities.
     ArchiveDocument:
       type: object
       properties:
@@ -2336,196 +2168,6 @@ components:
       - created_at
       - expires_at
       description: Retained record for archive category documents. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
-    SourceRecord:
-      type: object
-      required:
-      - id
-      - sourceId
-      - authority
-      - list
-      - sourceUrl
-      - entityType
-      - names
-      - identifiers
-      - birthDates
-      - addresses
-      - nationalities
-      - designations
-      - extensions
-      properties:
-        id:
-          type: string
-        sourceId:
-          type: string
-        authority:
-          type: string
-        list:
-          type: string
-        sourceUrl:
-          type: string
-        entityType:
-          type: string
-          enum:
-          - person
-          - organization
-          - vessel
-          - aircraft
-          - other
-        names:
-          type: array
-          items:
-            type: object
-            required:
-            - value
-            - kind
-            properties:
-              value:
-                type: string
-              kind:
-                enum:
-                - primary
-                - alias
-              quality:
-                enum:
-                - strong
-                - weak
-                - unknown
-              script:
-                type: string
-              provenance:
-                $ref: '#/components/schemas/SourceProvenance'
-        identifiers:
-          type: array
-          items:
-            type: object
-            required:
-            - type
-            - value
-            properties:
-              type:
-                type: string
-              value:
-                type: string
-              issuer:
-                type: string
-              provenance:
-                $ref: '#/components/schemas/SourceProvenance'
-        birthDates:
-          type: array
-          items:
-            type: object
-            required:
-            - value
-            - precision
-            - original
-            properties:
-              value:
-                type: string
-              precision:
-                enum:
-                - day
-                - month
-                - year
-                - range
-                - unknown
-              original:
-                type: string
-        addresses:
-          type: array
-          items:
-            type: object
-            properties:
-              text:
-                type: string
-              country:
-                type: string
-              provenance:
-                $ref: '#/components/schemas/SourceProvenance'
-        nationalities:
-          type: array
-          items:
-            type: string
-        designations:
-          type: array
-          items:
-            type: object
-            required:
-            - category
-            - programs
-            - legalReferences
-            properties:
-              category:
-                enum:
-                - financial_sanctions
-                - export_control
-                - debarment
-                - other
-              programs:
-                type: array
-                items:
-                  type: string
-              legalReferences:
-                type: array
-                items:
-                  type: string
-              wording:
-                type: string
-              effectiveDate:
-                type: string
-        dataThrough:
-          type: string
-          format: date
-          description: Inclusive publisher data-availability deadline; not a legal end date.
-        screeningPeriods:
-          type: array
-          maxItems: 1000
-          description: Inclusive UTC date intervals for current screening. Omitted means no date filter; an empty array excludes the record from current screening.
-          items:
-            type: object
-            additionalProperties: false
-            properties:
-              from:
-                type: string
-                format: date
-              through:
-                type: string
-                format: date
-        publicContext:
-          type: array
-          maxItems: 100
-          items:
-            type: object
-            required:
-            - label
-            - value
-            additionalProperties: false
-            properties:
-              label:
-                type: string
-                maxLength: 100
-              value:
-                type: string
-                maxLength: 2000
-        extensions:
-          type: object
-          additionalProperties: true
-          description: Source-specific published extensions. Keys and value shapes vary by source; preserve unknown values without assuming a fixed schema.
-    SourceProvenance:
-      type: object
-      properties:
-        sourceId:
-          type: string
-        recordId:
-          type: string
-        field:
-          type: string
-        rawValue:
-          type: string
-      required:
-      - sourceId
-      - recordId
-      - field
-      description: Publisher field attribution. rawValue is optional; when present it preserves the original published value.
     AuditPacket:
       type: object
       properties:
@@ -3370,12 +3012,34 @@ components:
       - documents
       - holds
       - limitations
-    ArchiveExpiredRecord:
+    ArchiveDecision:
       type: object
       properties:
         id:
           type: string
           format: uuid
+        organization_id:
+          type: string
+        case_id:
+          type: string
+          format: uuid
+        actor_id:
+          type: string
+        decision:
+          type: string
+        business_disposition:
+          type: string
+        review_started_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        applied_controls:
+          anyOf:
+          - $ref: '#/components/schemas/AppliedDecisionControls'
+          - type: 'null'
+        notes:
+          type: string
         created_at:
           type: string
           format: date-time
@@ -3384,24 +3048,128 @@ components:
           - type: string
             format: date-time
           - type: 'null'
-        expired:
-          const: true
-        decision:
-          type: string
-        business_disposition:
-          type: string
-        actor_id:
-          type: string
-        applied_controls:
-          anyOf:
-          - $ref: '#/components/schemas/AppliedDecisionControls'
-          - type: 'null'
       required:
       - id
+      - organization_id
+      - case_id
+      - actor_id
+      - decision
+      - business_disposition
+      - review_started_at
+      - applied_controls
+      - notes
       - created_at
       - expires_at
-      - expired
-      description: Expired archive content is replaced by this metadata. Review records use their last updated time as created_at. Decisions additionally retain decision, business_disposition, actor_id and applied_controls. No subject or evidence is reconstructed.
+      description: Retained record for archive category decisions. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
+    ScreeningResult:
+      type: object
+      required:
+      - id
+      - environment
+      - status
+      - createdAt
+      - matches
+      - coverage
+      - versions
+      - disclaimer
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Screening UUID; use it to retrieve retained result/evidence and locate linked review cases.
+        environment:
+          enum:
+          - sandbox
+          - production
+          description: Environment owned by the API key. Sandbox evidence is synthetic.
+        status:
+          enum:
+          - potential_match
+          - no_match
+          description: potential_match requires review of candidates; no_match means no returned candidates within the selected coverage and matching rules. Neither is a business approval or legal clearance.
+        createdAt:
+          type: string
+          format: date-time
+          description: Screening creation timestamp in ISO 8601 UTC.
+        matches:
+          type: array
+          items:
+            type: object
+            required:
+            - record
+            - score
+            - evidence
+            - conflicts
+            properties:
+              record:
+                $ref: '#/components/schemas/SourceRecord'
+              score:
+                type: number
+                minimum: 0
+                maximum: 100
+                description: Legacy composite review score retained for compatibility. Use assessment.name.similarity for name similarity and assessment for corroboration and conflicts. Not a probability of identity or wrongdoing.
+              assessment:
+                $ref: '#/components/schemas/MatchAssessment'
+              evidence:
+                type: array
+                items:
+                  type: object
+                  required:
+                  - field
+                  - queryValue
+                  - sourceValue
+                  - method
+                  - contribution
+                  - explanation
+                  properties:
+                    field:
+                      type: string
+                    queryValue:
+                      type: string
+                    sourceValue:
+                      type: string
+                    method:
+                      type: string
+                    contribution:
+                      type: number
+                    explanation:
+                      type: string
+              conflicts:
+                type: array
+                items:
+                  type: string
+          description: Candidate records with field evidence and conflicts. Always an array; empty for no_match. No silent truncation is performed.
+        coverage:
+          type: array
+          items:
+            $ref: '#/components/schemas/Coverage'
+          description: Exact source versions used, including freshness and retained publisher notices. Always present, including no_match.
+        versions:
+          type: object
+          required:
+          - dataset
+          - matchingEngine
+          - policy
+          properties:
+            dataset:
+              type: string
+            matchingEngine:
+              type: string
+            policy:
+              type: string
+            package:
+              type: string
+          description: Dataset, matching engine and policy versions used for this result. package is included only for package-based coverage.
+        disclaimer:
+          type: string
+          description: Interpretation limits supplied with this result; preserve them when presenting or exporting evidence.
+        policySnapshot:
+          $ref: '#/components/schemas/ScreeningPolicySnapshot'
+          description: Immutable organization policy applied at screening time, when one was selected. Omitted when no organization policy applied.
+        matching:
+          $ref: '#/components/schemas/AppliedMatchingPolicy'
+          description: Applied Standard or Focused alert profile, comparison thresholds and retrieval version. Saved with new results, including no-match results; omitted on historical results without this evidence. Select sensitivity through an approved screening policy, not an arbitrary request-level cutoff.
+      description: Result returned by POST /screenings and plain GET /results items. Its required fields are always present. A successful result is either potential_match or no_match; failures use the Error envelope instead.
     CaseGovernance:
       type: object
       properties:
@@ -3564,415 +3332,6 @@ components:
       - documentsTruncated
       - documentHosts
       - documentRepositories
-    Coverage:
-      type: object
-      required:
-      - sourceId
-      - version
-      - retrievedAt
-      - fresh
-      properties:
-        sourceId:
-          type: string
-        version:
-          type: string
-        retrievedAt:
-          type: string
-          format: date-time
-        publishedAt:
-          oneOf:
-          - type: string
-            format: date
-          - type: string
-            format: date-time
-          description: Authority-supplied publication date (YYYY-MM-DD) or RFC 3339 timestamp, preserving the precision supplied by the publisher. A date-only value does not imply midnight or a timezone. Omitted when no genuine publication date or timestamp is supplied.
-        fresh:
-          type: boolean
-        sourceNotice:
-          $ref: '#/components/schemas/SourceNotice'
-          description: Included in new production screening results, including no-match results. Absent from synthetic sandbox coverage and older retained evidence; historical evidence is not rewritten.
-    Error:
-      type: object
-      required:
-      - error
-      description: Failure envelope for every documented non-2xx API response. No data property is returned. Switch on error.code; messages may change.
-      properties:
-        error:
-          type: object
-          required:
-          - code
-          - message
-          - requestId
-          properties:
-            code:
-              type: string
-              description: Machine-readable failure code. See this operation’s status-specific examples for codes and recovery.
-            message:
-              type: string
-              description: Human-readable explanation. Do not parse this text to control application behavior.
-            requestId:
-              type: string
-              format: uuid
-              description: Server correlation ID, also returned in X-Request-Id. Include this ID in support requests.
-            details:
-              description: Optional JSON details for client and validation failures. Validation failures return an array of { path, message } issues; other 4xx codes may return a code-specific object. Server failures omit details. Never assume this key is present.
-              anyOf:
-              - type: array
-                maxItems: 50
-                items:
-                  type: object
-                  required:
-                  - path
-                  - message
-                  properties:
-                    path:
-                      type: string
-                      maxLength: 160
-                      description: Dot-separated invalid field path, including array indexes.
-                    message:
-                      type: string
-                      maxLength: 300
-                      description: Validation problem for this field.
-              - type: object
-                additionalProperties: true
-              - type:
-                - string
-                - number
-                - boolean
-                - 'null'
-            detailsTruncated:
-              type: boolean
-              description: True when only the first 50 validation issues are returned. Validation paths and messages are bounded.
-    ArchiveCorrection:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        organization_id:
-          type: string
-        environment:
-          type: string
-        case_id:
-          type: string
-          format: uuid
-        screening_id:
-          type: string
-          format: uuid
-        result_screening_id:
-          type: string
-          format: uuid
-        result_case_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-        before_subject:
-          $ref: '#/components/schemas/Subject'
-        after_subject:
-          $ref: '#/components/schemas/Subject'
-        reason:
-          type: string
-        actor_id:
-          type: string
-        created_at:
-          type: string
-          format: date-time
-        expires_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-      required:
-      - id
-      - organization_id
-      - environment
-      - case_id
-      - screening_id
-      - result_screening_id
-      - result_case_id
-      - before_subject
-      - after_subject
-      - reason
-      - actor_id
-      - created_at
-      - expires_at
-      description: Retained record for archive category corrections. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
-    ArchiveHold:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        organization_id:
-          type: string
-        environment:
-          type: string
-        case_id:
-          type: string
-          format: uuid
-        screening_ids:
-          type: array
-          items:
-            type: string
-        reason:
-          type: string
-        actor_id:
-          type: string
-        until_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-        released_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-        released_by:
-          anyOf:
-          - type: string
-          - type: 'null'
-        release_reason:
-          anyOf:
-          - type: string
-          - type: 'null'
-        created_at:
-          type: string
-          format: date-time
-      required:
-      - id
-      - organization_id
-      - environment
-      - case_id
-      - screening_ids
-      - actor_id
-      - until_at
-      - released_at
-      - released_by
-      - created_at
-      description: Retained record for archive category holds. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
-    ArchiveComment:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        organization_id:
-          type: string
-        environment:
-          type: string
-        case_id:
-          type: string
-          format: uuid
-        screening_id:
-          type: string
-          format: uuid
-        body:
-          type: string
-        actor_id:
-          type: string
-        created_at:
-          type: string
-          format: date-time
-        expires_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-      required:
-      - id
-      - organization_id
-      - environment
-      - case_id
-      - screening_id
-      - body
-      - actor_id
-      - created_at
-      - expires_at
-      description: Retained record for archive category comments. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
-    AppliedDecisionControls:
-      type: object
-      properties:
-        governanceRevision:
-          type: integer
-          minimum: 1
-        organizationApproval:
-          $schema: https://json-schema.org/draft/2020-12/schema
-          type: object
-          properties:
-            requireSecondReview:
-              default: false
-              type: boolean
-            secondReviewFor:
-              default: []
-              maxItems: 4
-              type: array
-              items:
-                type: string
-                enum:
-                - same_identity
-                - allow
-                - restrict
-                - escalate
-            approverRoles:
-              default:
-              - owner
-              - admin
-              - analyst
-              minItems: 1
-              maxItems: 3
-              type: array
-              items:
-                type: string
-                enum:
-                - owner
-                - admin
-                - analyst
-          additionalProperties: false
-          required:
-          - requireSecondReview
-          - secondReviewFor
-          - approverRoles
-        restrictedRoles:
-          type: object
-          properties:
-            approval:
-              type: array
-              items:
-                type: string
-                enum:
-                - analyst
-                - developer
-                - viewer
-            production:
-              type: array
-              items:
-                type: string
-                enum:
-                - analyst
-                - developer
-                - viewer
-          required:
-          - approval
-          - production
-          additionalProperties: false
-        screeningPolicy:
-          anyOf:
-          - type: object
-            properties:
-              id:
-                type: string
-                format: uuid
-              version:
-                type: integer
-                minimum: 1
-              review:
-                $schema: https://json-schema.org/draft/2020-12/schema
-                type: object
-                properties:
-                  requireSecondReview:
-                    default: false
-                    type: boolean
-                  secondReviewFor:
-                    default: []
-                    maxItems: 4
-                    type: array
-                    items:
-                      type: string
-                      enum:
-                      - same_identity
-                      - allow
-                      - restrict
-                      - escalate
-                  approverRoles:
-                    default:
-                    - owner
-                    - admin
-                    - analyst
-                    minItems: 1
-                    maxItems: 3
-                    type: array
-                    items:
-                      type: string
-                      enum:
-                      - owner
-                      - admin
-                      - analyst
-                additionalProperties: false
-                required:
-                - requireSecondReview
-                - secondReviewFor
-                - approverRoles
-            required:
-            - id
-            - version
-            - review
-            additionalProperties: false
-          - type: 'null'
-      required:
-      - governanceRevision
-      - organizationApproval
-      - restrictedRoles
-      - screeningPolicy
-      additionalProperties: false
-      description: Immutable decision-time approval configuration. A null appliedControls value on a decision means no historic snapshot is available; current settings are never substituted. Notification recipients and document hosts are excluded.
-    ArchiveScreening:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        organization_id:
-          type: string
-        environment:
-          type: string
-        subject:
-          anyOf:
-          - $ref: '#/components/schemas/Subject'
-          - type: 'null'
-        request:
-          anyOf:
-          - $ref: '#/components/schemas/ScreeningRequest'
-          - type: 'null'
-        result:
-          $ref: '#/components/schemas/ScreeningResult'
-        dataset_id:
-          type: string
-        retention:
-          type: string
-        expires_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-        retention_expires_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-        created_at:
-          type: string
-          format: date-time
-        counterparty_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-      required:
-      - id
-      - organization_id
-      - environment
-      - subject
-      - request
-      - result
-      - dataset_id
-      - retention
-      - expires_at
-      - retention_expires_at
-      - created_at
-      - counterparty_id
-      description: Retained record for archive category screenings. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
     ArchiveReuseRule:
       type: object
       properties:
@@ -4050,244 +3409,206 @@ components:
       - affected_case_ids
       - created_at
       description: Retained record for archive category reuseRules. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
-    ScreeningResult:
+    ArchiveHold:
       type: object
-      required:
-      - id
-      - environment
-      - status
-      - createdAt
-      - matches
-      - coverage
-      - versions
-      - disclaimer
       properties:
         id:
           type: string
           format: uuid
-          description: Screening UUID; use it to retrieve retained result/evidence and locate linked review cases.
+        organization_id:
+          type: string
         environment:
-          enum:
-          - sandbox
-          - production
-          description: Environment owned by the API key. Sandbox evidence is synthetic.
-        status:
-          enum:
-          - potential_match
-          - no_match
-          description: potential_match requires review of candidates; no_match means no returned candidates within the selected coverage and matching rules. Neither is a business approval or legal clearance.
-        createdAt:
           type: string
-          format: date-time
-          description: Screening creation timestamp in ISO 8601 UTC.
-        matches:
-          type: array
-          items:
-            type: object
-            required:
-            - record
-            - score
-            - evidence
-            - conflicts
-            properties:
-              record:
-                $ref: '#/components/schemas/SourceRecord'
-              score:
-                type: number
-                minimum: 0
-                maximum: 100
-                description: Legacy composite review score retained for compatibility. Use assessment.name.similarity for name similarity and assessment for corroboration and conflicts. Not a probability of identity or wrongdoing.
-              assessment:
-                $ref: '#/components/schemas/MatchAssessment'
-              evidence:
-                type: array
-                items:
-                  type: object
-                  required:
-                  - field
-                  - queryValue
-                  - sourceValue
-                  - method
-                  - contribution
-                  - explanation
-                  properties:
-                    field:
-                      type: string
-                    queryValue:
-                      type: string
-                    sourceValue:
-                      type: string
-                    method:
-                      type: string
-                    contribution:
-                      type: number
-                    explanation:
-                      type: string
-              conflicts:
-                type: array
-                items:
-                  type: string
-          description: Candidate records with field evidence and conflicts. Always an array; empty for no_match. No silent truncation is performed.
-        coverage:
-          type: array
-          items:
-            $ref: '#/components/schemas/Coverage'
-          description: Exact source versions used, including freshness and retained publisher notices. Always present, including no_match.
-        versions:
-          type: object
-          required:
-          - dataset
-          - matchingEngine
-          - policy
-          properties:
-            dataset:
-              type: string
-            matchingEngine:
-              type: string
-            policy:
-              type: string
-            package:
-              type: string
-          description: Dataset, matching engine and policy versions used for this result. package is included only for package-based coverage.
-        disclaimer:
-          type: string
-          description: Interpretation limits supplied with this result; preserve them when presenting or exporting evidence.
-        policySnapshot:
-          $ref: '#/components/schemas/ScreeningPolicySnapshot'
-          description: Immutable organization policy applied at screening time, when one was selected. Omitted when no organization policy applied.
-        matching:
-          $ref: '#/components/schemas/AppliedMatchingPolicy'
-          description: Applied Standard or Focused alert profile, comparison thresholds and retrieval version. Saved with new results, including no-match results; omitted on historical results without this evidence. Select sensitivity through an approved screening policy, not an arbitrary request-level cutoff.
-      description: Result returned by POST /screenings and plain GET /results items. Its required fields are always present. A successful result is either potential_match or no_match; failures use the Error envelope instead.
-    SourceNotice:
-      type: object
-      required:
-      - text
-      - sourceUrl
-      - termsUrl
-      properties:
-        text:
-          type: string
-          description: Required publisher attribution and reuse notices captured when screening runs.
-        sourceUrl:
-          type: string
-          format: uri
-        termsUrl:
-          type: string
-          format: uri
-        licenseUrl:
-          type: string
-          format: uri
-          description: Only included for a reviewed explicit license instrument.
-        databaseDownloadUrl:
-          type: string
-          format: uri-reference
-          description: Free complete derivative database for the exact immutable source version, where required. A relative path resolves against this API origin.
-    AppliedMatchingPolicy:
-      $schema: https://json-schema.org/draft/2020-12/schema
-      type: object
-      properties:
-        version:
-          type: string
-        profile:
-          type: string
-          enum:
-          - standard
-          - focused
-        nameThreshold:
-          type: integer
-          minimum: 0
-          maximum: 100
-        corroboratedNameThreshold:
-          type: integer
-          minimum: 0
-          maximum: 100
-        retrievalVersion:
-          type: string
-      required:
-      - version
-      - profile
-      - nameThreshold
-      - corroboratedNameThreshold
-      - retrievalVersion
-      additionalProperties: false
-      description: Effective matching profile and retrieval version retained at screening, including no-match results. Historical results can omit this snapshot. Profiles filter alerts within the same candidate retrieval; they are not population-calibrated probabilities.
-    CaseArchiveSegment:
-      type: object
-      properties:
-        format:
-          const: sanctionskit-case-archive@1
-        caseId:
+        case_id:
           type: string
           format: uuid
-        revision:
-          type: integer
-          minimum: 0
-        asOf:
-          type: string
-          format: date-time
-        segment:
-          type: integer
-          minimum: 0
-        category:
-          type: string
-          enum:
-          - case
-          - screenings
-          - decisions
-          - reviews
-          - reviewHistory
-          - comments
-          - attachments
-          - findings
-          - corrections
-          - checks
-          - documents
-          - holds
-          - reuseRules
-          - audit
-        records:
-          type: array
-          items:
-            anyOf:
-            - $ref: '#/components/schemas/ArchiveCase'
-            - $ref: '#/components/schemas/ArchiveScreening'
-            - $ref: '#/components/schemas/ArchiveDecision'
-            - $ref: '#/components/schemas/ArchiveReview'
-            - $ref: '#/components/schemas/ArchiveReviewHistory'
-            - $ref: '#/components/schemas/ArchiveComment'
-            - $ref: '#/components/schemas/ArchiveAttachment'
-            - $ref: '#/components/schemas/ArchiveFinding'
-            - $ref: '#/components/schemas/ArchiveCorrection'
-            - $ref: '#/components/schemas/ArchiveCheck'
-            - $ref: '#/components/schemas/ArchiveDocument'
-            - $ref: '#/components/schemas/ArchiveHold'
-            - $ref: '#/components/schemas/ArchiveReuseRule'
-            - $ref: '#/components/schemas/ArchiveAuditEvent'
-            - $ref: '#/components/schemas/ArchiveExpiredRecord'
-          description: 'Record shape follows category: case → ArchiveCase, screenings → ArchiveScreening, decisions → ArchiveDecision, reviews → ArchiveReview, reviewHistory → ArchiveReviewHistory, comments → ArchiveComment, attachments → ArchiveAttachment, findings → ArchiveFinding, corrections → ArchiveCorrection, checks → ArchiveCheck, documents → ArchiveDocument, holds → ArchiveHold, reuseRules → ArchiveReuseRule, audit → ArchiveAuditEvent. Expired content is replaced by ArchiveExpiredRecord. Non-case segments contain at most 25 records and may be empty while advancing to the next category.'
-        nextCursor:
-          anyOf:
-          - type: string
-          - type: 'null'
-        complete:
-          type: boolean
-        limitations:
+        screening_ids:
           type: array
           items:
             type: string
+        reason:
+          type: string
+        actor_id:
+          type: string
+        until_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        released_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        released_by:
+          anyOf:
+          - type: string
+          - type: 'null'
+        release_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+        created_at:
+          type: string
+          format: date-time
       required:
-      - format
-      - caseId
-      - revision
-      - asOf
-      - segment
-      - category
-      - records
-      - nextCursor
-      - complete
-      - limitations
-    ArchiveCheck:
+      - id
+      - organization_id
+      - environment
+      - case_id
+      - screening_ids
+      - actor_id
+      - until_at
+      - released_at
+      - released_by
+      - created_at
+      description: Retained record for archive category holds. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
+    MatchAssessment:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      type: object
+      properties:
+        name:
+          anyOf:
+          - type: object
+            properties:
+              similarity:
+                type: integer
+                minimum: 0
+                maximum: 100
+              method:
+                type: string
+              aliasKind:
+                type: string
+                enum:
+                - primary
+                - alias
+              aliasQuality:
+                type: string
+                enum:
+                - strong
+                - weak
+                - unknown
+            required:
+            - similarity
+            - method
+            - aliasKind
+            - aliasQuality
+            additionalProperties: false
+          - type: 'null'
+        identifiers:
+          type: object
+          properties:
+            status:
+              type: string
+              enum:
+              - agreement
+              - conflict
+              - not_supplied
+              - unavailable
+              - not_comparable
+            matched:
+              type: integer
+              minimum: 0
+              maximum: 9007199254740991
+            issuerAgreements:
+              type: integer
+              minimum: 0
+              maximum: 9007199254740991
+            issuerUnknown:
+              type: integer
+              minimum: 0
+              maximum: 9007199254740991
+            conflicts:
+              type: integer
+              minimum: 0
+              maximum: 9007199254740991
+          required:
+          - status
+          - matched
+          - issuerAgreements
+          - issuerUnknown
+          - conflicts
+          additionalProperties: false
+        birthDate:
+          type: object
+          properties:
+            status:
+              type: string
+              enum:
+              - agreement
+              - conflict
+              - not_supplied
+              - unavailable
+              - not_comparable
+            precision:
+              type: string
+              enum:
+              - year
+              - month
+              - day
+          required:
+          - status
+          additionalProperties: false
+        country:
+          type: object
+          properties:
+            status:
+              type: string
+              enum:
+              - agreement
+              - conflict
+              - not_supplied
+              - unavailable
+              - not_comparable
+          required:
+          - status
+          additionalProperties: false
+        entityType:
+          type: object
+          properties:
+            status:
+              type: string
+              enum:
+              - agreement
+              - conflict
+              - not_supplied
+              - unavailable
+              - not_comparable
+          required:
+          - status
+          additionalProperties: false
+        reviewTier:
+          type: string
+          enum:
+          - identifier
+          - corroborated
+          - conflicting
+          - name_only
+        alertBasis:
+          type: string
+          enum:
+          - identifier
+          - name
+          - name_and_birth_date
+        hasConflicts:
+          type: boolean
+        sameNameCandidates:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+      required:
+      - name
+      - identifiers
+      - birthDate
+      - country
+      - entityType
+      - reviewTier
+      - alertBasis
+      - hasConflicts
+      - sameNameCandidates
+      additionalProperties: false
+      description: Retained name similarity, identity comparison states and review evidence tier. Contains no copied subject values. Missing information, conflicts and partial dates remain distinct; an evidence tier is not a finding of identity or wrongdoing.
+    ArchiveAttachment:
       type: object
       properties:
         id:
@@ -4303,14 +3624,14 @@ components:
         screening_id:
           type: string
           format: uuid
-        label:
+        title:
           type: string
-        status:
+        content:
           type: string
-        evidence_reference:
+        sha256:
           type: string
-        rationale:
-          type: string
+        size:
+          type: integer
         actor_id:
           type: string
         created_at:
@@ -4327,14 +3648,14 @@ components:
       - environment
       - case_id
       - screening_id
-      - label
-      - status
-      - evidence_reference
-      - rationale
+      - title
+      - content
+      - sha256
+      - size
       - actor_id
       - created_at
       - expires_at
-      description: Retained record for archive category checks. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
+      description: Retained record for archive category attachments. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
     OperationsReport:
       type: object
       properties:
@@ -4502,173 +3823,12 @@ components:
       - sourceCoverage
       - expiringEvidence
       - limitations
-    ArchiveReview:
+    ArchiveExpiredRecord:
       type: object
       properties:
         id:
           type: string
           format: uuid
-        organization_id:
-          type: string
-        environment:
-          type: string
-        case_id:
-          type: string
-          format: uuid
-        screening_id:
-          type: string
-          format: uuid
-        source_id:
-          type: string
-        record_id:
-          type: string
-        identity_decision:
-          type: string
-        business_decision:
-          type: string
-        rationale:
-          type: string
-        reusable_until:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-        reused_rule_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-        actor_id:
-          type: string
-        updated_at:
-          type: string
-          format: date-time
-        expires_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-      required:
-      - id
-      - organization_id
-      - environment
-      - case_id
-      - screening_id
-      - source_id
-      - record_id
-      - identity_decision
-      - business_decision
-      - rationale
-      - reusable_until
-      - reused_rule_id
-      - actor_id
-      - updated_at
-      - expires_at
-      description: Retained record for archive category reviews. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
-    ArchiveReviewHistory:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        organization_id:
-          type: string
-        environment:
-          type: string
-        case_id:
-          type: string
-          format: uuid
-        screening_id:
-          type: string
-          format: uuid
-        source_id:
-          type: string
-        record_id:
-          type: string
-        review:
-          type: object
-          properties:
-            id:
-              type: string
-              format: uuid
-            screeningId:
-              type: string
-              format: uuid
-            sourceId:
-              type: string
-            recordId:
-              type: string
-            identityDecision:
-              type: string
-              enum:
-              - unresolved
-              - same
-              - different
-            businessDecision:
-              type: string
-              enum:
-              - pending
-              - allow
-              - restrict
-              - escalate
-            rationale:
-              type: string
-            reusableUntil:
-              anyOf:
-              - type: string
-                format: date-time
-              - type: 'null'
-            reusedRuleId:
-              anyOf:
-              - type: string
-                format: uuid
-              - type: 'null'
-            actorId:
-              type: string
-            updatedAt:
-              type: string
-              format: date-time
-            reuse:
-              type: object
-              properties:
-                caseId:
-                  type: string
-                  format: uuid
-                screeningId:
-                  type: string
-                  format: uuid
-                approvedBy:
-                  type: string
-                expiresAt:
-                  type: string
-                  format: date-time
-                revokedAt:
-                  anyOf:
-                  - type: string
-                    format: date-time
-                  - type: 'null'
-              required:
-              - caseId
-              - screeningId
-              - approvedBy
-              - expiresAt
-              - revokedAt
-          required:
-          - id
-          - screeningId
-          - sourceId
-          - recordId
-          - identityDecision
-          - businessDecision
-          - rationale
-          - reusableUntil
-          - reusedRuleId
-          - actorId
-          - updatedAt
-        replaced_by:
-          type: string
-        reason:
-          type: string
         created_at:
           type: string
           format: date-time
@@ -4677,105 +3837,150 @@ components:
           - type: string
             format: date-time
           - type: 'null'
-      required:
-      - id
-      - organization_id
-      - environment
-      - case_id
-      - screening_id
-      - source_id
-      - record_id
-      - review
-      - replaced_by
-      - reason
-      - created_at
-      - expires_at
-      description: Retained record for archive category reviewHistory. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
-    ArchiveDecision:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        organization_id:
-          type: string
-        case_id:
-          type: string
-          format: uuid
-        actor_id:
-          type: string
+        expired:
+          const: true
         decision:
           type: string
         business_disposition:
           type: string
-        review_started_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
+        actor_id:
+          type: string
         applied_controls:
           anyOf:
           - $ref: '#/components/schemas/AppliedDecisionControls'
           - type: 'null'
-        notes:
-          type: string
-        created_at:
-          type: string
-          format: date-time
-        expires_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
       required:
       - id
-      - organization_id
-      - case_id
-      - actor_id
-      - decision
-      - business_disposition
-      - review_started_at
-      - applied_controls
-      - notes
       - created_at
       - expires_at
-      description: Retained record for archive category decisions. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
-    ArchiveAuditEvent:
+      - expired
+      description: Expired archive content is replaced by this metadata. Review records use their last updated time as created_at. Decisions additionally retain decision, business_disposition, actor_id and applied_controls. No subject or evidence is reconstructed.
+    Coverage:
+      type: object
+      required:
+      - sourceId
+      - version
+      - retrievedAt
+      - fresh
+      properties:
+        sourceId:
+          type: string
+        version:
+          type: string
+        retrievedAt:
+          type: string
+          format: date-time
+        publishedAt:
+          oneOf:
+          - type: string
+            format: date
+          - type: string
+            format: date-time
+          description: Authority-supplied publication date (YYYY-MM-DD) or RFC 3339 timestamp, preserving the precision supplied by the publisher. A date-only value does not imply midnight or a timezone. Omitted when no genuine publication date or timestamp is supplied.
+        fresh:
+          type: boolean
+        sourceNotice:
+          $ref: '#/components/schemas/SourceNotice'
+          description: Included in new production screening results, including no-match results. Absent from synthetic sandbox coverage and older retained evidence; historical evidence is not rewritten.
+    CaseArchiveSegment:
       type: object
       properties:
-        id:
+        format:
+          const: sanctionskit-case-archive@1
+        caseId:
           type: string
           format: uuid
-        organization_id:
-          type: string
-        actor_id:
-          type: string
-        action:
-          type: string
-        resource_id:
-          anyOf:
-          - type: string
-          - type: 'null'
-        details:
-          description: Retained category-specific JSON value; keys may vary by event or historical version.
-        created_at:
+        revision:
+          type: integer
+          minimum: 0
+        asOf:
           type: string
           format: date-time
-        expires_at:
+        segment:
+          type: integer
+          minimum: 0
+        category:
+          type: string
+          enum:
+          - case
+          - screenings
+          - decisions
+          - reviews
+          - reviewHistory
+          - comments
+          - attachments
+          - findings
+          - corrections
+          - checks
+          - documents
+          - holds
+          - reuseRules
+          - audit
+        records:
+          type: array
+          items:
+            anyOf:
+            - $ref: '#/components/schemas/ArchiveCase'
+            - $ref: '#/components/schemas/ArchiveScreening'
+            - $ref: '#/components/schemas/ArchiveDecision'
+            - $ref: '#/components/schemas/ArchiveReview'
+            - $ref: '#/components/schemas/ArchiveReviewHistory'
+            - $ref: '#/components/schemas/ArchiveComment'
+            - $ref: '#/components/schemas/ArchiveAttachment'
+            - $ref: '#/components/schemas/ArchiveFinding'
+            - $ref: '#/components/schemas/ArchiveCorrection'
+            - $ref: '#/components/schemas/ArchiveCheck'
+            - $ref: '#/components/schemas/ArchiveDocument'
+            - $ref: '#/components/schemas/ArchiveHold'
+            - $ref: '#/components/schemas/ArchiveReuseRule'
+            - $ref: '#/components/schemas/ArchiveAuditEvent'
+            - $ref: '#/components/schemas/ArchiveExpiredRecord'
+          description: 'Record shape follows category: case → ArchiveCase, screenings → ArchiveScreening, decisions → ArchiveDecision, reviews → ArchiveReview, reviewHistory → ArchiveReviewHistory, comments → ArchiveComment, attachments → ArchiveAttachment, findings → ArchiveFinding, corrections → ArchiveCorrection, checks → ArchiveCheck, documents → ArchiveDocument, holds → ArchiveHold, reuseRules → ArchiveReuseRule, audit → ArchiveAuditEvent. Expired content is replaced by ArchiveExpiredRecord. Non-case segments contain at most 25 records and may be empty while advancing to the next category.'
+        nextCursor:
           anyOf:
           - type: string
-            format: date-time
           - type: 'null'
+        complete:
+          type: boolean
+        limitations:
+          type: array
+          items:
+            type: string
       required:
-      - id
-      - organization_id
-      - actor_id
-      - action
-      - resource_id
-      - details
-      - created_at
-      - expires_at
-      description: Retained record for archive category audit. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
+      - format
+      - caseId
+      - revision
+      - asOf
+      - segment
+      - category
+      - records
+      - nextCursor
+      - complete
+      - limitations
+    SourceNotice:
+      type: object
+      required:
+      - text
+      - sourceUrl
+      - termsUrl
+      properties:
+        text:
+          type: string
+          description: Required publisher attribution and reuse notices captured when screening runs.
+        sourceUrl:
+          type: string
+          format: uri
+        termsUrl:
+          type: string
+          format: uri
+        licenseUrl:
+          type: string
+          format: uri
+          description: Only included for a reviewed explicit license instrument.
+        databaseDownloadUrl:
+          type: string
+          format: uri-reference
+          description: Free complete derivative database for the exact immutable source version, where required. A relative path resolves against this API origin.
     ScreeningPolicySnapshot:
       $schema: https://json-schema.org/draft/2020-12/schema
       type: object
@@ -4960,6 +4165,61 @@ components:
       - environment
       - createdAt
       additionalProperties: false
+    ArchiveCorrection:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+        environment:
+          type: string
+        case_id:
+          type: string
+          format: uuid
+        screening_id:
+          type: string
+          format: uuid
+        result_screening_id:
+          type: string
+          format: uuid
+        result_case_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        before_subject:
+          $ref: '#/components/schemas/Subject'
+        after_subject:
+          $ref: '#/components/schemas/Subject'
+        reason:
+          type: string
+        actor_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+      required:
+      - id
+      - organization_id
+      - environment
+      - case_id
+      - screening_id
+      - result_screening_id
+      - result_case_id
+      - before_subject
+      - after_subject
+      - reason
+      - actor_id
+      - created_at
+      - expires_at
+      description: Retained record for archive category corrections. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
     Subject:
       $schema: https://json-schema.org/draft/2020-12/schema
       type: object
@@ -5025,6 +4285,424 @@ components:
       required:
       - name
       additionalProperties: false
+    ArchiveCheck:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+        environment:
+          type: string
+        case_id:
+          type: string
+          format: uuid
+        screening_id:
+          type: string
+          format: uuid
+        label:
+          type: string
+        status:
+          type: string
+        evidence_reference:
+          type: string
+        rationale:
+          type: string
+        actor_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+      required:
+      - id
+      - organization_id
+      - environment
+      - case_id
+      - screening_id
+      - label
+      - status
+      - evidence_reference
+      - rationale
+      - actor_id
+      - created_at
+      - expires_at
+      description: Retained record for archive category checks. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
+    SourceProvenance:
+      type: object
+      properties:
+        sourceId:
+          type: string
+        recordId:
+          type: string
+        field:
+          type: string
+        rawValue:
+          type: string
+      required:
+      - sourceId
+      - recordId
+      - field
+      description: Publisher field attribution. rawValue is optional; when present it preserves the original published value.
+    ArchiveFinding:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+        environment:
+          type: string
+        case_id:
+          type: string
+          format: uuid
+        screening_id:
+          type: string
+          format: uuid
+        source_id:
+          type: string
+        record_id:
+          type: string
+        field:
+          type: string
+        value:
+          type: string
+        source_reference:
+          type: string
+        verification:
+          type: string
+        comparison:
+          type: string
+        notes:
+          type: string
+        content:
+          type: string
+        actor_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+      required:
+      - id
+      - organization_id
+      - environment
+      - case_id
+      - screening_id
+      - source_id
+      - record_id
+      - field
+      - value
+      - source_reference
+      - verification
+      - comparison
+      - notes
+      - content
+      - actor_id
+      - created_at
+      - expires_at
+      description: Retained record for archive category findings. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
+    AppliedDecisionControls:
+      type: object
+      properties:
+        governanceRevision:
+          type: integer
+          minimum: 1
+        organizationApproval:
+          $schema: https://json-schema.org/draft/2020-12/schema
+          type: object
+          properties:
+            requireSecondReview:
+              default: false
+              type: boolean
+            secondReviewFor:
+              default: []
+              maxItems: 4
+              type: array
+              items:
+                type: string
+                enum:
+                - same_identity
+                - allow
+                - restrict
+                - escalate
+            approverRoles:
+              default:
+              - owner
+              - admin
+              - analyst
+              minItems: 1
+              maxItems: 3
+              type: array
+              items:
+                type: string
+                enum:
+                - owner
+                - admin
+                - analyst
+          additionalProperties: false
+          required:
+          - requireSecondReview
+          - secondReviewFor
+          - approverRoles
+        restrictedRoles:
+          type: object
+          properties:
+            approval:
+              type: array
+              items:
+                type: string
+                enum:
+                - analyst
+                - developer
+                - viewer
+            production:
+              type: array
+              items:
+                type: string
+                enum:
+                - analyst
+                - developer
+                - viewer
+          required:
+          - approval
+          - production
+          additionalProperties: false
+        screeningPolicy:
+          anyOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              version:
+                type: integer
+                minimum: 1
+              review:
+                $schema: https://json-schema.org/draft/2020-12/schema
+                type: object
+                properties:
+                  requireSecondReview:
+                    default: false
+                    type: boolean
+                  secondReviewFor:
+                    default: []
+                    maxItems: 4
+                    type: array
+                    items:
+                      type: string
+                      enum:
+                      - same_identity
+                      - allow
+                      - restrict
+                      - escalate
+                  approverRoles:
+                    default:
+                    - owner
+                    - admin
+                    - analyst
+                    minItems: 1
+                    maxItems: 3
+                    type: array
+                    items:
+                      type: string
+                      enum:
+                      - owner
+                      - admin
+                      - analyst
+                additionalProperties: false
+                required:
+                - requireSecondReview
+                - secondReviewFor
+                - approverRoles
+            required:
+            - id
+            - version
+            - review
+            additionalProperties: false
+          - type: 'null'
+      required:
+      - governanceRevision
+      - organizationApproval
+      - restrictedRoles
+      - screeningPolicy
+      additionalProperties: false
+      description: Immutable decision-time approval configuration. A null appliedControls value on a decision means no historic snapshot is available; current settings are never substituted. Notification recipients and document hosts are excluded.
+    ArchiveReviewHistory:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+        environment:
+          type: string
+        case_id:
+          type: string
+          format: uuid
+        screening_id:
+          type: string
+          format: uuid
+        source_id:
+          type: string
+        record_id:
+          type: string
+        review:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            screeningId:
+              type: string
+              format: uuid
+            sourceId:
+              type: string
+            recordId:
+              type: string
+            identityDecision:
+              type: string
+              enum:
+              - unresolved
+              - same
+              - different
+            businessDecision:
+              type: string
+              enum:
+              - pending
+              - allow
+              - restrict
+              - escalate
+            rationale:
+              type: string
+            reusableUntil:
+              anyOf:
+              - type: string
+                format: date-time
+              - type: 'null'
+            reusedRuleId:
+              anyOf:
+              - type: string
+                format: uuid
+              - type: 'null'
+            actorId:
+              type: string
+            updatedAt:
+              type: string
+              format: date-time
+            reuse:
+              type: object
+              properties:
+                caseId:
+                  type: string
+                  format: uuid
+                screeningId:
+                  type: string
+                  format: uuid
+                approvedBy:
+                  type: string
+                expiresAt:
+                  type: string
+                  format: date-time
+                revokedAt:
+                  anyOf:
+                  - type: string
+                    format: date-time
+                  - type: 'null'
+              required:
+              - caseId
+              - screeningId
+              - approvedBy
+              - expiresAt
+              - revokedAt
+          required:
+          - id
+          - screeningId
+          - sourceId
+          - recordId
+          - identityDecision
+          - businessDecision
+          - rationale
+          - reusableUntil
+          - reusedRuleId
+          - actorId
+          - updatedAt
+        replaced_by:
+          type: string
+        reason:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+      required:
+      - id
+      - organization_id
+      - environment
+      - case_id
+      - screening_id
+      - source_id
+      - record_id
+      - review
+      - replaced_by
+      - reason
+      - created_at
+      - expires_at
+      description: Retained record for archive category reviewHistory. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
+    ArchiveComment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+        environment:
+          type: string
+        case_id:
+          type: string
+          format: uuid
+        screening_id:
+          type: string
+          format: uuid
+        body:
+          type: string
+        actor_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+      required:
+      - id
+      - organization_id
+      - environment
+      - case_id
+      - screening_id
+      - body
+      - actor_id
+      - created_at
+      - expires_at
+      description: Retained record for archive category comments. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
     ArchiveCase:
       type: object
       properties:
@@ -5181,7 +4859,314 @@ components:
       - retention_event_reason
       - retention_event_actor
       description: Retained record for archive category case. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
-    ArchiveAttachment:
+    SourceRecord:
+      type: object
+      required:
+      - id
+      - sourceId
+      - authority
+      - list
+      - sourceUrl
+      - entityType
+      - names
+      - identifiers
+      - birthDates
+      - addresses
+      - nationalities
+      - designations
+      - extensions
+      properties:
+        id:
+          type: string
+        sourceId:
+          type: string
+        authority:
+          type: string
+        list:
+          type: string
+        sourceUrl:
+          type: string
+        entityType:
+          type: string
+          enum:
+          - person
+          - organization
+          - vessel
+          - aircraft
+          - other
+        names:
+          type: array
+          items:
+            type: object
+            required:
+            - value
+            - kind
+            properties:
+              value:
+                type: string
+              kind:
+                enum:
+                - primary
+                - alias
+              quality:
+                enum:
+                - strong
+                - weak
+                - unknown
+              script:
+                type: string
+              provenance:
+                $ref: '#/components/schemas/SourceProvenance'
+        identifiers:
+          type: array
+          items:
+            type: object
+            required:
+            - type
+            - value
+            properties:
+              type:
+                type: string
+              value:
+                type: string
+              issuer:
+                type: string
+              provenance:
+                $ref: '#/components/schemas/SourceProvenance'
+        birthDates:
+          type: array
+          items:
+            type: object
+            required:
+            - value
+            - precision
+            - original
+            properties:
+              value:
+                type: string
+              precision:
+                enum:
+                - day
+                - month
+                - year
+                - range
+                - unknown
+              original:
+                type: string
+        addresses:
+          type: array
+          items:
+            type: object
+            properties:
+              text:
+                type: string
+              country:
+                type: string
+              provenance:
+                $ref: '#/components/schemas/SourceProvenance'
+        nationalities:
+          type: array
+          items:
+            type: string
+        designations:
+          type: array
+          items:
+            type: object
+            required:
+            - category
+            - programs
+            - legalReferences
+            properties:
+              category:
+                enum:
+                - financial_sanctions
+                - export_control
+                - debarment
+                - other
+              programs:
+                type: array
+                items:
+                  type: string
+              legalReferences:
+                type: array
+                items:
+                  type: string
+              wording:
+                type: string
+              effectiveDate:
+                type: string
+        dataThrough:
+          type: string
+          format: date
+          description: Inclusive publisher data-availability deadline; not a legal end date.
+        screeningPeriods:
+          type: array
+          maxItems: 1000
+          description: Inclusive UTC date intervals for current screening. Omitted means no date filter; an empty array excludes the record from current screening.
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              from:
+                type: string
+                format: date
+              through:
+                type: string
+                format: date
+        publicContext:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required:
+            - label
+            - value
+            additionalProperties: false
+            properties:
+              label:
+                type: string
+                maxLength: 100
+              value:
+                type: string
+                maxLength: 2000
+        extensions:
+          type: object
+          additionalProperties: true
+          description: Source-specific published extensions. Keys and value shapes vary by source; preserve unknown values without assuming a fixed schema.
+    ScreeningRequest:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      type: object
+      properties:
+        subject:
+          type: object
+          properties:
+            name:
+              type: string
+              minLength: 2
+              maxLength: 300
+              description: Name to compare with publisher records. Leading and trailing whitespace is removed; provide the fullest reliable name available.
+            entityType:
+              default: person
+              type: string
+              enum:
+              - person
+              - organization
+              - vessel
+              - aircraft
+              - other
+              description: Type of subject. Defaults to person when omitted. Every selected source must support this type.
+            identifiers:
+              default: []
+              maxItems: 20
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                    description: Identifier scheme, such as passport, national_id, registration, lei, imo or mmsi. Matching normalizes supported scheme aliases.
+                  value:
+                    type: string
+                    minLength: 1
+                    maxLength: 160
+                    description: Identifier value. Send the original value; scheme-specific normalization is applied during matching.
+                  issuer:
+                    type: string
+                    minLength: 1
+                    maxLength: 100
+                    description: Optional issuing authority or country. Omit when unknown; do not send null.
+                required:
+                - type
+                - value
+                additionalProperties: false
+              description: Typed identifiers used for exact matching, such as passport, national_id, registration, lei, imo or mmsi. Defaults to an empty array. Use the publisher’s identifier scheme; custom scheme names are accepted.
+            birthDate:
+              anyOf:
+              - type: string
+                pattern: ^(?!0000)\d{4}$
+              - type: string
+                pattern: ^(?!0000)\d{4}-(0[1-9]|1[0-2])$
+              - type: string
+                allOf:
+                - pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))$
+                - pattern: ^(?!0000)
+              description: 'Known date or partial date: YYYY, YYYY-MM or YYYY-MM-DD. Preserve known precision; do not invent a month or day. Year 0000 and invalid dates are rejected.'
+            country:
+              type: string
+              minLength: 2
+              maxLength: 100
+              description: Known country name or code used as supporting identity evidence. It is not a source-selection or geographic coverage filter.
+          required:
+          - name
+          additionalProperties: false
+          description: Identity to screen. name is required; entityType defaults to person and identifiers defaults to an empty array.
+        counterpartyId:
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          description: Optional existing active counterparty UUID in the same organization and environment. The submitted subject must match its current identity; this does not create a counterparty.
+        policy:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+              description: Policy UUID from GET /policies.
+            version:
+              type: integer
+              exclusiveMinimum: 0
+              maximum: 9007199254740991
+              description: Exact approved policy version from GET /policies. Reload the policy if that version is no longer available.
+          required:
+          - id
+          - version
+          additionalProperties: false
+          description: Approved organization policy reference. Required when GET /policies returns requirePolicy=true. A supplied policy must be current and compatible with the subject and requested coverage.
+          x-required-when: GET /policies returns requirePolicy=true for the current API key environment.
+        reference:
+          type: string
+          maxLength: 160
+          description: Optional caller reference (up to 160 characters). It is retained with standard evidence and returned by GET /results/{id}; it is null in minimal-retention retrieval.
+        sources:
+          minItems: 1
+          maxItems: 512
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 80
+          description: Explicit source IDs from GET /sources. Provide sources or package, exactly one. Every selected source must be available, fresh and support the subject type; unavailable coverage fails closed.
+        package:
+          type: string
+          minLength: 1
+          maxLength: 80
+          description: One versioned coverage package, mutually exclusive with sources. Sandbox accepts only sandbox@1. Use only a package available to the selected environment; no implicit global coverage is applied.
+        retention:
+          default: standard
+          type: string
+          enum:
+          - standard
+          - minimal
+          description: standard retains inputs and evidence under organization/case policy. minimal is available only for individual API-key screenings, lasts 24 hours, omits submitted inputs, and cannot create a review case. Governance requirements can require standard. Defaults to standard.
+      required:
+      - subject
+      additionalProperties: false
+      oneOf:
+      - required:
+        - sources
+        not:
+          required:
+          - package
+      - required:
+        - package
+        not:
+          required:
+          - sources
+      description: Single subject input. Exactly one of sources or package is required. Only subject is unconditionally required; coverage and approved policy also have conditional requirements described below.
+    ArchiveReview:
       type: object
       properties:
         id:
@@ -5197,17 +5182,29 @@ components:
         screening_id:
           type: string
           format: uuid
-        title:
+        source_id:
           type: string
-        content:
+        record_id:
           type: string
-        sha256:
+        identity_decision:
           type: string
-        size:
-          type: integer
+        business_decision:
+          type: string
+        rationale:
+          type: string
+        reusable_until:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        reused_rule_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
         actor_id:
           type: string
-        created_at:
+        updated_at:
           type: string
           format: date-time
         expires_at:
@@ -5221,14 +5218,17 @@ components:
       - environment
       - case_id
       - screening_id
-      - title
-      - content
-      - sha256
-      - size
+      - source_id
+      - record_id
+      - identity_decision
+      - business_decision
+      - rationale
+      - reusable_until
+      - reused_rule_id
       - actor_id
-      - created_at
+      - updated_at
       - expires_at
-      description: Retained record for archive category attachments. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
+      description: Retained record for archive category reviews. Keys retain their stored snake_case spelling. Nullable columns are included with null values. Expired records use ArchiveExpiredRecord instead; holdings can omit expired reason text.
   securitySchemes:
     bearerAuth:
       type: http

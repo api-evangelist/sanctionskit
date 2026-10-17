@@ -789,23 +789,6 @@ components:
       - environment
       - createdAt
       additionalProperties: false
-    PolicyList:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/ScreeningPolicySnapshot'
-        requirePolicy:
-          type: boolean
-        nextCursor:
-          anyOf:
-          - type: string
-          - type: 'null'
-      required:
-      - items
-      - requirePolicy
-      - nextCursor
     Error:
       type: object
       required:
@@ -858,6 +841,23 @@ components:
             detailsTruncated:
               type: boolean
               description: True when only the first 50 validation issues are returned. Validation paths and messages are bounded.
+    PolicyList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScreeningPolicySnapshot'
+        requirePolicy:
+          type: boolean
+        nextCursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+      required:
+      - items
+      - requirePolicy
+      - nextCursor
   securitySchemes:
     bearerAuth:
       type: http

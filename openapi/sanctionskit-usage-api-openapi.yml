@@ -340,6 +340,100 @@ paths:
                       requestId: 01234567-89ab-4cde-8f01-23456789abcd
 components:
   schemas:
+    Error:
+      type: object
+      required:
+      - error
+      description: Failure envelope for every documented non-2xx API response. No data property is returned. Switch on error.code; messages may change.
+      properties:
+        error:
+          type: object
+          required:
+          - code
+          - message
+          - requestId
+          properties:
+            code:
+              type: string
+              description: Machine-readable failure code. See this operation’s status-specific examples for codes and recovery.
+            message:
+              type: string
+              description: Human-readable explanation. Do not parse this text to control application behavior.
+            requestId:
+              type: string
+              format: uuid
+              description: Server correlation ID, also returned in X-Request-Id. Include this ID in support requests.
+            details:
+              description: Optional JSON details for client and validation failures. Validation failures return an array of { path, message } issues; other 4xx codes may return a code-specific object. Server failures omit details. Never assume this key is present.
+              anyOf:
+              - type: array
+                maxItems: 50
+                items:
+                  type: object
+                  required:
+                  - path
+                  - message
+                  properties:
+                    path:
+                      type: string
+                      maxLength: 160
+                      description: Dot-separated invalid field path, including array indexes.
+                    message:
+                      type: string
+                      maxLength: 300
+                      description: Validation problem for this field.
+              - type: object
+                additionalProperties: true
+              - type:
+                - string
+                - number
+                - boolean
+                - 'null'
+            detailsTruncated:
+              type: boolean
+              description: True when only the first 50 validation issues are returned. Validation paths and messages are bounded.
+    MonitoringForecast:
+      type: object
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+        periodEnd:
+          type: string
+          format: date-time
+        dailyScreenings:
+          type: number
+          minimum: 0
+        projectedRemainingScreenings:
+          type: integer
+          minimum: 0
+        effectiveLimit:
+          type: integer
+          minimum: 0
+        used:
+          type: integer
+          minimum: 0
+        reserved:
+          type: integer
+          minimum: 0
+        remaining:
+          type: integer
+          minimum: 0
+        projectedExhaustionAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+      required:
+      - generatedAt
+      - periodEnd
+      - dailyScreenings
+      - projectedRemainingScreenings
+      - effectiveLimit
+      - used
+      - reserved
+      - remaining
+      - projectedExhaustionAt
     Usage:
       type: object
       properties:
@@ -463,100 +557,6 @@ components:
       - sandbox
       - maxBatchUploadBytes
       - maxEvidenceAttachmentBytes
-    Error:
-      type: object
-      required:
-      - error
-      description: Failure envelope for every documented non-2xx API response. No data property is returned. Switch on error.code; messages may change.
-      properties:
-        error:
-          type: object
-          required:
-          - code
-          - message
-          - requestId
-          properties:
-            code:
-              type: string
-              description: Machine-readable failure code. See this operation’s status-specific examples for codes and recovery.
-            message:
-              type: string
-              description: Human-readable explanation. Do not parse this text to control application behavior.
-            requestId:
-              type: string
-              format: uuid
-              description: Server correlation ID, also returned in X-Request-Id. Include this ID in support requests.
-            details:
-              description: Optional JSON details for client and validation failures. Validation failures return an array of { path, message } issues; other 4xx codes may return a code-specific object. Server failures omit details. Never assume this key is present.
-              anyOf:
-              - type: array
-                maxItems: 50
-                items:
-                  type: object
-                  required:
-                  - path
-                  - message
-                  properties:
-                    path:
-                      type: string
-                      maxLength: 160
-                      description: Dot-separated invalid field path, including array indexes.
-                    message:
-                      type: string
-                      maxLength: 300
-                      description: Validation problem for this field.
-              - type: object
-                additionalProperties: true
-              - type:
-                - string
-                - number
-                - boolean
-                - 'null'
-            detailsTruncated:
-              type: boolean
-              description: True when only the first 50 validation issues are returned. Validation paths and messages are bounded.
-    MonitoringForecast:
-      type: object
-      properties:
-        generatedAt:
-          type: string
-          format: date-time
-        periodEnd:
-          type: string
-          format: date-time
-        dailyScreenings:
-          type: number
-          minimum: 0
-        projectedRemainingScreenings:
-          type: integer
-          minimum: 0
-        effectiveLimit:
-          type: integer
-          minimum: 0
-        used:
-          type: integer
-          minimum: 0
-        reserved:
-          type: integer
-          minimum: 0
-        remaining:
-          type: integer
-          minimum: 0
-        projectedExhaustionAt:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-      required:
-      - generatedAt
-      - periodEnd
-      - dailyScreenings
-      - projectedRemainingScreenings
-      - effectiveLimit
-      - used
-      - reserved
-      - remaining
-      - projectedExhaustionAt
   securitySchemes:
     bearerAuth:
       type: http

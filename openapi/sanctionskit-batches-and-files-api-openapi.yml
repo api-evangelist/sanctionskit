@@ -2411,6 +2411,243 @@ paths:
                       requestId: 01234567-89ab-4cde-8f01-23456789abcd
 components:
   schemas:
+    BatchRequest:
+      $schema: https://json-schema.org/draft/2020-12/schema
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Human-readable batch label. Leading and trailing whitespace is removed.
+        subjects:
+          minItems: 1
+          maxItems: 100
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/ScreeningRequest'
+            - type: object
+              properties:
+                retention:
+                  const: standard
+          description: One to 100 complete ScreeningRequest objects. Each row chooses its own coverage and must use standard retention (or omit retention). Supply subjects or uploadId, exactly one.
+        uploadId:
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          description: UUID returned by POST /uploads/intent after its private NDJSON upload has completed and passed validation. The file must be ready, unexpired and unused. Mutually exclusive with subjects; uploaded files support up to 10,000 request rows.
+      required:
+      - name
+      additionalProperties: false
+      oneOf:
+      - required:
+        - subjects
+        not:
+          required:
+          - uploadId
+      - required:
+        - uploadId
+        not:
+          required:
+          - subjects
+      description: Batch input. Exactly one of subjects or uploadId is required in addition to name. Every row uses standard retention.
+    UploadTokenRequest:
+      type: object
+      properties:
+        type:
+          const: blob.generate-client-token
+          description: Fixed client-token request discriminator.
+        payload:
+          type: object
+          properties:
+            pathname:
+              type: string
+              description: Exact pathname from POST /uploads/intent; it is bound to your organization and key environment.
+            clientPayload:
+              anyOf:
+              - type: string
+              - type: 'null'
+              description: Client metadata field used by the upload protocol. Send null when no metadata is needed.
+            multipart:
+              const: false
+              description: 'Must be false: only a single bounded private upload is supported.'
+          required:
+          - pathname
+          - clientPayload
+          - multipart
+          description: Provider client-token payload. Use the exact pathname from the authorized upload intent.
+      required:
+      - type
+      - payload
+    Error:
+      type: object
+      required:
+      - error
+      description: Failure envelope for every documented non-2xx API response. No data property is returned. Switch on error.code; messages may change.
+      properties:
+        error:
+          type: object
+          required:
+          - code
+          - message
+          - requestId
+          properties:
+            code:
+              type: string
+              description: Machine-readable failure code. See this operation’s status-specific examples for codes and recovery.
+            message:
+              type: string
+              description: Human-readable explanation. Do not parse this text to control application behavior.
+            requestId:
+              type: string
+              format: uuid
+              description: Server correlation ID, also returned in X-Request-Id. Include this ID in support requests.
+            details:
+              description: Optional JSON details for client and validation failures. Validation failures return an array of { path, message } issues; other 4xx codes may return a code-specific object. Server failures omit details. Never assume this key is present.
+              anyOf:
+              - type: array
+                maxItems: 50
+                items:
+                  type: object
+                  required:
+                  - path
+                  - message
+                  properties:
+                    path:
+                      type: string
+                      maxLength: 160
+                      description: Dot-separated invalid field path, including array indexes.
+                    message:
+                      type: string
+                      maxLength: 300
+                      description: Validation problem for this field.
+              - type: object
+                additionalProperties: true
+              - type:
+                - string
+                - number
+                - boolean
+                - 'null'
+            detailsTruncated:
+              type: boolean
+              description: True when only the first 50 validation issues are returned. Validation paths and messages are bounded.
+    BatchPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Batch'
+        nextCursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+      required:
+      - items
+      - nextCursor
+    UploadIntent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        pathname:
+          type: string
+        access:
+          const: private
+        handleUploadUrl:
+          const: /api/v1/uploads
+        maxBytes:
+          type: integer
+          minimum: 0
+        reservedBytes:
+          type: integer
+          minimum: 0
+        format:
+          type: string
+      required:
+      - id
+      - pathname
+      - access
+      - handleUploadUrl
+      - maxBytes
+      - reservedBytes
+      - format
+    BatchCancellation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - completed
+          - cancelled
+          - failed
+      required:
+      - id
+      - status
+    Batch:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        environment:
+          type: string
+          enum:
+          - sandbox
+          - production
+        status:
+          type: string
+          enum:
+          - importing
+          - pending
+          - processing
+          - completed
+          - cancelled
+          - failed
+        total:
+          type: integer
+          minimum: 0
+        completed:
+          type: integer
+          minimum: 0
+        failed:
+          type: integer
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+        cancelled_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+      required:
+      - id
+      - name
+      - environment
+      - status
+      - total
+      - completed
+      - failed
+      - created_at
+      - cancelled_at
+    UploadIntentRequest:
+      type: object
+      properties:
+        sizeBytes:
+          type: integer
+          minimum: 1
+          maximum: 26214400
+          description: Exact UTF-8 byte size of the NDJSON upload. Maximum 26,214,400 bytes (25 MiB). Omission reserves the full maximum for legacy clients. The entire body may also be omitted.
+      required: []
+      additionalProperties: false
     UploadTokenResponse:
       type: object
       properties:
@@ -2576,215 +2813,6 @@ components:
       - id
       - status
       - total
-    BatchRequest:
-      $schema: https://json-schema.org/draft/2020-12/schema
-      type: object
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 100
-          description: Human-readable batch label. Leading and trailing whitespace is removed.
-        subjects:
-          minItems: 1
-          maxItems: 100
-          type: array
-          items:
-            allOf:
-            - $ref: '#/components/schemas/ScreeningRequest'
-            - type: object
-              properties:
-                retention:
-                  const: standard
-          description: One to 100 complete ScreeningRequest objects. Each row chooses its own coverage and must use standard retention (or omit retention). Supply subjects or uploadId, exactly one.
-        uploadId:
-          type: string
-          format: uuid
-          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
-          description: UUID returned by POST /uploads/intent after its private NDJSON upload has completed and passed validation. The file must be ready, unexpired and unused. Mutually exclusive with subjects; uploaded files support up to 10,000 request rows.
-      required:
-      - name
-      additionalProperties: false
-      oneOf:
-      - required:
-        - subjects
-        not:
-          required:
-          - uploadId
-      - required:
-        - uploadId
-        not:
-          required:
-          - subjects
-      description: Batch input. Exactly one of subjects or uploadId is required in addition to name. Every row uses standard retention.
-    Batch:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        environment:
-          type: string
-          enum:
-          - sandbox
-          - production
-        status:
-          type: string
-          enum:
-          - importing
-          - pending
-          - processing
-          - completed
-          - cancelled
-          - failed
-        total:
-          type: integer
-          minimum: 0
-        completed:
-          type: integer
-          minimum: 0
-        failed:
-          type: integer
-          minimum: 0
-        created_at:
-          type: string
-          format: date-time
-        cancelled_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-      required:
-      - id
-      - name
-      - environment
-      - status
-      - total
-      - completed
-      - failed
-      - created_at
-      - cancelled_at
-    UploadIntent:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        pathname:
-          type: string
-        access:
-          const: private
-        handleUploadUrl:
-          const: /api/v1/uploads
-        maxBytes:
-          type: integer
-          minimum: 0
-        reservedBytes:
-          type: integer
-          minimum: 0
-        format:
-          type: string
-      required:
-      - id
-      - pathname
-      - access
-      - handleUploadUrl
-      - maxBytes
-      - reservedBytes
-      - format
-    Error:
-      type: object
-      required:
-      - error
-      description: Failure envelope for every documented non-2xx API response. No data property is returned. Switch on error.code; messages may change.
-      properties:
-        error:
-          type: object
-          required:
-          - code
-          - message
-          - requestId
-          properties:
-            code:
-              type: string
-              description: Machine-readable failure code. See this operation’s status-specific examples for codes and recovery.
-            message:
-              type: string
-              description: Human-readable explanation. Do not parse this text to control application behavior.
-            requestId:
-              type: string
-              format: uuid
-              description: Server correlation ID, also returned in X-Request-Id. Include this ID in support requests.
-            details:
-              description: Optional JSON details for client and validation failures. Validation failures return an array of { path, message } issues; other 4xx codes may return a code-specific object. Server failures omit details. Never assume this key is present.
-              anyOf:
-              - type: array
-                maxItems: 50
-                items:
-                  type: object
-                  required:
-                  - path
-                  - message
-                  properties:
-                    path:
-                      type: string
-                      maxLength: 160
-                      description: Dot-separated invalid field path, including array indexes.
-                    message:
-                      type: string
-                      maxLength: 300
-                      description: Validation problem for this field.
-              - type: object
-                additionalProperties: true
-              - type:
-                - string
-                - number
-                - boolean
-                - 'null'
-            detailsTruncated:
-              type: boolean
-              description: True when only the first 50 validation issues are returned. Validation paths and messages are bounded.
-    BatchPage:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/Batch'
-        nextCursor:
-          anyOf:
-          - type: string
-          - type: 'null'
-      required:
-      - items
-      - nextCursor
-    UploadIntentRequest:
-      type: object
-      properties:
-        sizeBytes:
-          type: integer
-          minimum: 1
-          maximum: 26214400
-          description: Exact UTF-8 byte size of the NDJSON upload. Maximum 26,214,400 bytes (25 MiB). Omission reserves the full maximum for legacy clients. The entire body may also be omitted.
-      required: []
-      additionalProperties: false
-    BatchCancellation:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        status:
-          type: string
-          enum:
-          - completed
-          - cancelled
-          - failed
-      required:
-      - id
-      - status
     BatchDetail:
       type: object
       properties:
@@ -2880,34 +2908,6 @@ components:
       - cancelled_at
       - rows
       - nextOffset
-    UploadTokenRequest:
-      type: object
-      properties:
-        type:
-          const: blob.generate-client-token
-          description: Fixed client-token request discriminator.
-        payload:
-          type: object
-          properties:
-            pathname:
-              type: string
-              description: Exact pathname from POST /uploads/intent; it is bound to your organization and key environment.
-            clientPayload:
-              anyOf:
-              - type: string
-              - type: 'null'
-              description: Client metadata field used by the upload protocol. Send null when no metadata is needed.
-            multipart:
-              const: false
-              description: 'Must be false: only a single bounded private upload is supported.'
-          required:
-          - pathname
-          - clientPayload
-          - multipart
-          description: Provider client-token payload. Use the exact pathname from the authorized upload intent.
-      required:
-      - type
-      - payload
   securitySchemes:
     bearerAuth:
       type: http
