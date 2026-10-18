@@ -273,6 +273,8 @@ apis:
   humanURL: https://www.sanctionskit.com/docs/api-reference
   baseURL: https://www.sanctionskit.com/api/v1
   tags:
+  - Webhook
+  tags_raw:
   - Webhooks
   properties:
   - type: OpenAPI
