@@ -1,0 +1,12 @@
+{
+ "url": "https://www.sanctionskit.com/openapi.json",
+ "requested_url": "https://www.sanctionskit.com/openapi.json",
+ "status": 200,
+ "content_type": "application/json; charset=utf-8",
+ "bytes": 1276405,
+ "sha256": "ee35d211051ac59466f15ac101fe9fd8b572641c5328a6b605359cf869705c6c",
+ "fetched_at": "2026-10-19",
+ "fetched_by": "APIEvangelist-Harvest/1.0 (+https://apievangelist.com)",
+ "match": "equivalent",
+ "note": "Re-fetched from the provider by verify-openapi-sources.py; the provider's current document describes the same operations (Jaccard 1.0), but the bytes differ, so the archive is an earlier or reformatted copy."
+}
