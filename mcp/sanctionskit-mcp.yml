@@ -50,46 +50,46 @@ auth:
 tool_count: 9
 tools:
 - name: search_docs
-  title: Search SanctionsKit documentation
   description: Find current integration documentation and guides by keyword. Returns document slugs for
     get_doc. Public; no account needed.
+  title: Search SanctionsKit documentation
   inputs:
   - query
   - limit
   auth: none
   read_only: true
 - name: get_doc
-  title: Read an integration document
   description: Read a document returned by search_docs, including code examples and error handling. Uses
     a fixed local document catalog; does not fetch arbitrary URLs.
+  title: Read an integration document
   inputs:
   - slug
   auth: none
   read_only: true
 - name: get_api_schema
-  title: Inspect the REST API contract
   description: Without path, list consumer REST operations. With a path such as /screenings and lowercase
     method, retrieve its OpenAPI request, response, examples and referenced schemas. Describes REST capabilities;
     MCP account tools are sandbox only.
+  title: Inspect the REST API contract
   inputs:
   - path
   - method
   auth: none
   read_only: true
 - name: validate_screening_request
-  title: Validate a screening request
   description: Validate request structure against the runtime REST screening schema without submitting
     or retaining it. Does not check live source eligibility or grant clearance. Use synthetic development
     inputs.
+  title: Validate a screening request
   inputs:
   - request
   auth: none
   read_only: true
 - name: list_sources
-  title: Discover source coverage
   description: Read current source metadata and qualification from the connected sandbox workspace, with
     bounded pagination. Catalog/production source availability does not enable live MCP screenings; sandbox
     screening uses sandbox@1.
+  title: Discover source coverage
   inputs:
   - query
   - offset
@@ -97,11 +97,11 @@ tools:
   auth: oauth2 (sources:read)
   read_only: true
 - name: run_sandbox_screening
-  title: Test a sandbox screening
   description: Submit invented data to sandbox@1. Requires synthetic=true and an idempotencyKey of 8–128
     URL-safe characters, reused unchanged with the same request for retries. Retains screening evidence
     according to policy and may create a review case; consumes sandbox allowance, never paid production
     allowance. Cannot screen production or link counterparties.
+  title: Test a sandbox screening
   inputs:
   - request
   - idempotencyKey
@@ -109,23 +109,23 @@ tools:
   auth: oauth2 (screenings:write)
   read_only: false
 - name: get_screening_result
-  title: Read a sandbox screening result
   description: Retrieve retained evidence by screening ID from the connected sandbox workspace. An expired
     result is an error. Preserve coverage, versions, warnings and potential-match review requirements.
+  title: Read a sandbox screening result
   inputs:
   - id
   auth: oauth2 (results:read)
   read_only: false
 - name: get_usage
-  title: Check sandbox allowance
   description: Read the connected sandbox workspace allowance, completed subjects and pending reservations.
+  title: Check sandbox allowance
   inputs: []
   auth: oauth2 (usage:read)
   read_only: true
 - name: get_profile
-  title: Identify the connected profile
   description: Identify the sandbox profile represented by the authenticated connection. Takes no user
     or workspace selector.
+  title: Identify the connected profile
   inputs: []
   auth: oauth2
   read_only: true
@@ -158,3 +158,4 @@ tool_quality:
   scored: false
   note: Facts from the saved tools/list capture (mcp_tool_quality.py); recorded, not scored. Checks learned
     from Glimind's agent-readiness audit.
+tools_count: 9
