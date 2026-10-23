@@ -4552,3 +4552,9 @@ components:
       scheme: bearer
       bearerFormat: sk_test_... or sk_live_...
 x-docs-revision: 499779e00214c23622695c6d7114fb3656edf29161460d9f9e9d2ab65d0cf087
+x-provenance:
+  method: harvested
+  publisher: SanctionsKit
+  source: https://www.sanctionskit.com/openapi.json
+  note: split by refine-openapis from the provider's own published document, verified by fetch (openapi/_original/*.fetch.json);
+    stamped by stamp-openapi-provenance.py (roadmap#793)
